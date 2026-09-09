@@ -1,0 +1,26 @@
+{
+  "index": 181,
+  "url": "https://accounts.google.com/gsi/client",
+  "status": 200,
+  "resource_type": "script",
+  "method": "GET",
+  "content_type": "application/javascript; charset=utf-8",
+  "headers": {
+    "content-security-policy": "require-trusted-types-for 'script';report-uri https://csp.withgoogle.com/csp/identity-sign-in-google-http, script-src 'report-sample' 'nonce-KaGPa9bZ2Ls_iTSryEr8mQ' 'unsafe-inline' 'strict-dynamic' https: http: 'unsafe-eval';object-src 'none';base-uri 'self';report-uri https://csp.withgoogle.com/csp/identity-sign-in-google-http",
+    "cache-control": "private, max-age=1800",
+    "content-encoding": "gzip",
+    "cross-origin-resource-policy": "cross-origin",
+    "report-to": "{\"group\":\"coop_dd7de8473bddc59c6b748810a67a39b1\",\"max_age\":2592000,\"endpoints\":[{\"url\":\"https://csp.withgoogle.com/csp/report-to/dd7de8473bddc59c6b748810a67a39b1\"}]}",
+    "x-content-type-options": "nosniff",
+    "expires": "Fri, 04 Sep 2026 20:40:05 GMT",
+    "alt-svc": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000",
+    "cross-origin-opener-policy-report-only": "same-origin; report-to=\"coop_dd7de8473bddc59c6b748810a67a39b1\"",
+    "date": "Fri, 04 Sep 2026 20:40:05 GMT",
+    "x-xss-protection": "0",
+    "content-type": "application/javascript; charset=utf-8",
+    "vary": "Sec-Fetch-Dest, Sec-Fetch-Mode, Sec-Fetch-Site",
+    "server": "ESF",
+    "x-frame-options": "SAMEORIGIN"
+  },
+  "file": "0181_gsi_client_096019ef244b.js"
+}
