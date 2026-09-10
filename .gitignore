@@ -182,3 +182,4 @@ pyrightconfig.json
 .vscode
 .vscode/*
 
+proy_heatmap/LOGS/*

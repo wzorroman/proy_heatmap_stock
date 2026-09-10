@@ -8,10 +8,13 @@ y almacena los datos en PostgreSQL.
 | Archivo | Descripcion |
 |---------|-------------|
 | scrapper_heatmap_v1.py | Script principal: consulta endpoint, top 1000 stocks, INSERT en BD |
+| app.py | Frontend Streamlit (solo llama al servicio) |
+| application/heatmap_service.py | Logica de negocio y transformacion (pivot de precios, labels) |
+| application/db/heatmap_repository.py | Consultas SQL |
 | config.py | Configuracion (endpoint, headers, columnas, conexion BD) |
 | create_partitions.py | Crea particiones mensuales para tablas de hechos |
 | db/postgresql_connection.py | Conector PostgreSQL |
-| utils/config_logging.py | Logger |
+| utils/config_logging.py | Logger (rotacion diaria, retiene 14 dias) |
 
 ## Ejecucion manual
 
@@ -169,12 +172,30 @@ con auto-refresh cada 2.5 minutos.
 ```
 app.py                          <- Streamlit UI (solo llama al servicio)
 application/
-    heatmap_service.py          <- Logica de negocio
+    heatmap_service.py          <- Logica de negocio (pivot, labels, formato)
     db/
         heatmap_repository.py   <- Consultas SQL
 db/
     postgresql_connection.py    <- Conector generico (existe)
 config.py                       <- Configuracion (existe)
+```
+
+Flujo de dependencias:
+
+```
+app.py (UI)
+   │
+   ▼
+application/heatmap_service.py    (orquesta + transforma)
+   │
+   ▼
+application/db/heatmap_repository.py   (SQL puro)
+   │
+   ▼
+db/postgresql_connection.py
+   │
+   ▼
+PostgreSQL (fact_heatmap_snapshot / dim_asset)
 ```
 
 ### Ejecucion
@@ -188,10 +209,31 @@ Abrir en el navegador: `http://localhost:8501`
 
 ### Funcionalidades
 
-- **Tabla principal**: Symbol, Company, Price, Change%, Market Cap
-- **Filtros**: Busqueda por simbolo, filtro por sector, ordenamiento
-- **Metricas**: Total stocks, subieron, bajaron, cambio promedio
-- **Auto-refresh**: Cada 2.5 minutos
+- **Tabla de evolucion de precios**: ultimos 6 snapshots (aprox 30 min) por stock, cada columna es una marca de tiempo `HH:MM`
+- **Columna Asset**: combina ticker + nombre de la empresa + sector como label `[Sector]`
+- **Precio a color**: verde si subio, rojo si bajo, negro si sin cambio (comparado con el snapshot anterior)
+- **Market Cap legible**: `$5.27T`, `$987.65M`, etc.
+- **Filtros**: busqueda por simbolo, filtro por sector
+- **Metricas**: total stocks, subieron, bajaron, cambio promedio
+- **Orden**: market cap descendente (desde SQL)
+- **Auto-refresh**: cada 2.5 minutos
+
+### Vista de la tabla
+
+```
+┌─────────┬──────────────────────────────┬──────────┬──────────┬────────────┬─────────┬─────────┬─────────┐
+│ Symbol  │ Asset                        │ Price    │ Change%  │ Market Cap │ 12:45   │ 12:40   │ 12:35   │
+├─────────┼──────────────────────────────┼──────────┼──────────┼────────────┼─────────┼─────────┼─────────┤
+│ NVDA    │ NVDA [Electronic Technology] │ $218.49  │  +2.35%  │ $5.27T     │ 218.50  │ 218.49  │ 218.42  │
+│ AAPL    │ AAPL [Electronic Technology] │ $323.96  │  +1.12%  │ $4.73T     │ 323.98  │ 323.96  │ 323.97  │
+│ MSFT    │ MSFT [Technology Services]   │ $415.20  │  -0.45%  │ $3.08T     │ 415.21  │ 415.20  │ 415.14  │
+│ AMZN    │ AMZN [Retail Trade]          │ $218.94  │  +1.87%  │ $2.31T     │ 218.93  │ 218.94  │ 218.35  │
+│ TSLA    │ TSLA [Consumer Durables]     │ $345.12  │  -2.15%  │ $1.10T     │ 345.11  │ 345.12  │ 345.80  │
+│ META    │ META [Technology Services]   │ $542.30  │  +0.89%  │ $1.37T     │ 542.31  │ 542.30  │ 542.35  │
+└─────────┴──────────────────────────────┴──────────┴──────────┴────────────┴─────────┴─────────┴─────────┘
+
+Precio en verde si subio respecto al snapshot anterior, rojo si bajo, negro si sin cambio.
+```
 
 ### Dependencias del frontend
 
