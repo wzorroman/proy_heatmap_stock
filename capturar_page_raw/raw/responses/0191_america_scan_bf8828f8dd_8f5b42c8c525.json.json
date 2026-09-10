@@ -1,0 +1,27 @@
+{
+  "index": 191,
+  "url": "https://scanner.tradingview.com/america/scan?label-product=heatmap-stock",
+  "status": 200,
+  "resource_type": "fetch",
+  "method": "POST",
+  "content_type": "application/json; charset=utf-8",
+  "headers": {
+    "access-control-max-age": "86400",
+    "content-encoding": "gzip",
+    "access-control-allow-methods": "GET, POST",
+    "x-cache": "Miss from cloudfront",
+    "x-amz-cf-id": "RuErLqgBRaHUv0YmxvVUEFpCWgrJGo8WHILkHTeRd8qemOJRLvo7Lg==",
+    "date": "Thu, 10 Sep 2026 16:00:53 GMT",
+    "content-type": "application/json; charset=utf-8",
+    "vary": "Accept, Origin",
+    "access-control-allow-headers": "Referer,Accept",
+    "strict-transport-security": "max-age=63072000; includeSubDomains; preload",
+    "x-cache-level": "hit1",
+    "access-control-allow-credentials": "true",
+    "via": "216.250.139.94:443, 1.1 08a337d4c41835bb1a388ee0311fd0aa.cloudfront.net (CloudFront)",
+    "access-control-allow-origin": "https://es.tradingview.com",
+    "x-amz-cf-pop": "LIM50-P4",
+    "server": "tv"
+  },
+  "file": "0191_america_scan_bf8828f8dd_8f5b42c8c525.json"
+}

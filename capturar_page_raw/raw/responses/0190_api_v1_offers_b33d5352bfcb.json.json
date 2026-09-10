@@ -1,0 +1,29 @@
+{
+  "index": 190,
+  "url": "https://es.tradingview.com/api/v1/offers/",
+  "status": 200,
+  "resource_type": "fetch",
+  "method": "GET",
+  "content_type": "application/json",
+  "headers": {
+    "age": "92",
+    "x-content-type-options": "nosniff, nosniff",
+    "expires": "Thu, 10 Sep 2026 16:01:21 GMT",
+    "alt-svc": "h3=\":443\"; ma=86400",
+    "x-cache": "Hit from cloudfront",
+    "x-amz-cf-id": "35x24NSyEJO5e_5NtvOLIvIMHgG40gnJBtTh-L-RMfjaMGTM-zw3Cw==",
+    "date": "Thu, 10 Sep 2026 15:59:21 GMT",
+    "content-type": "application/json",
+    "vary": "Cookie",
+    "strict-transport-security": "max-age=63072000; includeSubDomains; preload",
+    "cache-control": "max-age=120",
+    "cross-origin-opener-policy": "same-origin-allow-popups",
+    "referrer-policy": "origin-when-cross-origin, origin-when-cross-origin",
+    "allow": "GET, HEAD, OPTIONS",
+    "via": "1.1 1b60cf6445dea0db327d48d27419e066.cloudfront.net (CloudFront)",
+    "content-length": "2",
+    "x-amz-cf-pop": "LIM50-P1",
+    "server": "tv"
+  },
+  "file": "0190_api_v1_offers_b33d5352bfcb.json"
+}

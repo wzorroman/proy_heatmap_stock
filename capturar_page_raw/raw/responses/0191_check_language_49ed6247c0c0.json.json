@@ -1,0 +1,27 @@
+{
+  "index": 191,
+  "url": "https://es.tradingview.com/check_language/",
+  "status": 200,
+  "resource_type": "fetch",
+  "method": "POST",
+  "content_type": "application/json",
+  "headers": {
+    "x-content-type-options": "nosniff, nosniff",
+    "expires": "Thu, 10 Sep 2026 16:02:53 GMT",
+    "alt-svc": "h3=\":443\"; ma=86400",
+    "x-cache": "Miss from cloudfront",
+    "x-amz-cf-id": "EUKwaNAM432pZXtJ5vxHdDfSYqvV9YL7i0_ur9N5jB3t4z63JywUqw==",
+    "date": "Thu, 10 Sep 2026 16:00:53 GMT",
+    "content-type": "application/json",
+    "vary": "Cookie",
+    "strict-transport-security": "max-age=63072000; includeSubDomains; preload",
+    "cache-control": "max-age=120",
+    "cross-origin-opener-policy": "same-origin-allow-popups",
+    "referrer-policy": "origin-when-cross-origin, origin-when-cross-origin",
+    "via": "1.1 41214e21a06ae299a8c0c72752b81bac.cloudfront.net (CloudFront)",
+    "content-length": "64",
+    "x-amz-cf-pop": "LIM50-P1",
+    "server": "tv"
+  },
+  "file": "0191_check_language_49ed6247c0c0.json"
+}

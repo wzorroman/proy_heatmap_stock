@@ -1,0 +1,1 @@
+(self.webpackChunktradingview=self.webpackChunktradingview||[]).push([[71237],{105993(a){a.exports=["La oferta finaliza hoy"]},711278(a){a.exports=["La oferta acaba en {offerDuration} día","La oferta acaba en {offerDuration} días"]},616612(a){a.exports=["Versión de prueba de {days} día","Versión de prueba de {days} días"]}}]);

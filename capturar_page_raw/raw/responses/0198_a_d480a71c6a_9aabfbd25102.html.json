@@ -1,0 +1,17 @@
+{
+  "index": 198,
+  "url": "https://www.googletagmanager.com/a?v=3&t=l&pid=1688486641&rv=6980&tag_exp=115938465~115938468~118897920~118897930~120213116~120385422~120469145~120469153~120474863&u=AAAAAIAAAAQAACCA&ut=AAAI&h=Ag&gtm=45je6980v9104254764za200zd9104254764&ccid=104254764&cid=G-YVVRYGL0E0&l=L783.S7.Y8.B32.E216.I602.TC17.HTC0.F816.C6~gtm.init_consent.S3.V2.E40.TS5ogtdma.TI10.TE0~gtm.init.S0.V0.E35.TS5ogtautoevents.TI12.TE0.TS5ogt1pdatav2.TI14.TE0.TS5ccdgafirst.TI27.TE0.TS5setproductsettings.TI26.TE0.TS5ogtgooglesignals.TI25.TE0.TS5ccdgaregscope.TI24.TE0.TS5ccdemdownload.TI23.TE0.TS5ccdemform.TI22.TE0.TS5ccdemoutboundclick.TI21.TE0.TS5ccdempageview.TI20.TE0.TS5ccdemscroll.TI19.TE0.TS5ccdemsitesearch.TI18.TE0.TS5ccdemvideo.TI17.TE0.TS5ccdconversionmarking.TI16.TE0.TS5ccdgalast.TI15.TE0~gtm.js.S0.V0.E26.TS5gct.TI8.TE1~gtm.dom.S0.V0.E7~gtm.scrollDepth.S0.V0.E5~*.S0.V0.E6~gtm.load.S0.V0.E1~GA382.389.409",
+  "status": 200,
+  "resource_type": "image",
+  "method": "GET",
+  "content_type": "text/html",
+  "headers": {
+    "alt-svc": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000",
+    "content-length": "0",
+    "date": "Thu, 10 Sep 2026 16:00:53 GMT",
+    "x-xss-protection": "0",
+    "content-type": "text/html",
+    "server": "Google Tag Manager"
+  },
+  "file": "0198_a_d480a71c6a_9aabfbd25102.html"
+}
