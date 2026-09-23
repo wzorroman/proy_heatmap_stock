@@ -8,7 +8,7 @@ load_dotenv('.env')
 # =============================================================================
 # VERSIONES Y APLICACIÓN
 # =============================================================================
-VERSION = "1.0.1"
+VERSION = "1.0.2"
 TIMEZONE = pytz.timezone("America/Lima")
 
 # =============================================================================
@@ -29,7 +29,7 @@ APP_NAME = "heatmap_stock"
 # CONFIGURACIÓN DE BASE DE DATOS
 # =============================================================================
 try:
-    PG_HOST = os.getenv('BD_HEATMAP_SERVER')
+    PG_HOST = os.getenv('BD_HEATMAP_HOST')
     PG_PORT = int(os.getenv('BD_HEATMAP_PORT'))
     PG_DATABASE = os.getenv('BD_HEATMAP_DATABASE')
     PG_USER = os.getenv('BD_HEATMAP_USER')

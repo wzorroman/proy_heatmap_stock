@@ -21,7 +21,7 @@ import json
 import requests
 from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Any, Optional
-from create_partitions import create_monthly_partitions
+from create_partitions import create_monthly_partitions, create_partition
 
 # Asegurar que el path del proyecto esté en sys.path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -47,15 +47,20 @@ def parse_vector(d: List) -> Optional[Dict[str, Any]]:
         return None
 
     typespecs = d[0]
-    asset_class = typespecs[0] if isinstance(typespecs, list) and typespecs else ""
+    share_class = ""
+    if isinstance(typespecs, list) and typespecs:
+        share_class = typespecs[0]
+    elif isinstance(typespecs, str) and typespecs:
+        share_class = typespecs
 
     return {
-        "asset_class": asset_class,
+        "asset_class": "equity",
+        "share_class": share_class,
         "daily_change_pct": round_value(d[1]),
         "market_cap": round_value(d[11], 2),
         "sector": d[21],
         "logo": d[22],
-        "price": round_value(d[23]),
+        "price_heatmap": round_value(d[23]),
         "ticker": d[25],
         "company_name": d[25],
         "stream_status": d[26],
@@ -70,33 +75,34 @@ def get_or_create_asset(conn: PostgreSQLConnector, symbol: str, parsed: Dict) ->
     """
     ticker = parsed.get('ticker') or symbol.split(':')[-1] if ':' in symbol else symbol
     exchange = symbol.split(':')[0] if ':' in symbol else None
-    asset_class = parsed.get('asset_class')
-    if isinstance(asset_class, list) and asset_class:
-        asset_class = asset_class[0]
+    asset_class = parsed.get('asset_class') or 'equity'
+    share_class = parsed.get('share_class')
 
     logo = parsed.get('logo')
     logo_id = logo.get('logoid') if isinstance(logo, dict) else None
 
 
     # Upsert con RETURNING asset_id
+    # asset_class/share_class/source_discovered_by quedan con primer-gana (COALESCE).
     upsert_query = """
         INSERT INTO dim_asset (
-            symbol, ticker, exchange, asset_class,
-            sector, company_name, logo_id
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+            symbol, ticker, exchange, asset_class, share_class,
+            sector, company_name, logo_id, source_discovered_by
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         ON CONFLICT (symbol) DO UPDATE SET
-            ticker = EXCLUDED.ticker,
-            exchange = EXCLUDED.exchange,
-            asset_class = EXCLUDED.asset_class,
-            sector = EXCLUDED.sector,
-            company_name = EXCLUDED.company_name,
-            logo_id = EXCLUDED.logo_id,
+            ticker = COALESCE(dim_asset.ticker, EXCLUDED.ticker),
+            exchange = COALESCE(dim_asset.exchange, EXCLUDED.exchange),
+            asset_class = COALESCE(dim_asset.asset_class, EXCLUDED.asset_class),
+            share_class = COALESCE(dim_asset.share_class, EXCLUDED.share_class),
+            sector = COALESCE(dim_asset.sector, EXCLUDED.sector),
+            company_name = COALESCE(dim_asset.company_name, EXCLUDED.company_name),
+            logo_id = COALESCE(dim_asset.logo_id, EXCLUDED.logo_id),
             updated_at = CURRENT_TIMESTAMP
         RETURNING asset_id
     """
     result = conn.execute_query(upsert_query, (
-        symbol, ticker, exchange, asset_class,
-        parsed.get('sector'), parsed.get('company_name'), logo_id
+        symbol, ticker, exchange, asset_class, share_class,
+        parsed.get('sector'), parsed.get('company_name'), logo_id, 'heatmap'
     ))
     if result and 'asset_id' in result[0]:
         return result[0]['asset_id']
@@ -122,20 +128,7 @@ def process_heatmap_data(conn: PostgreSQLConnector, data: List[Dict]) -> int:
     next_month = (first_day + timedelta(days=32)).replace(day=1)
     partition_name = f"fact_heatmap_snapshot_{first_day.strftime('%Y_%m')}"
 
-    # Verificar si la partición ya existe
-    check_query = """
-        SELECT 1 FROM pg_class c
-        JOIN pg_namespace n ON n.oid = c.relnamespace
-        WHERE c.relname = %s AND n.nspname = 'public'
-    """
-    result = conn.execute_query(check_query, (partition_name,))
-    if not result:
-        logger.info(f"Creando partición {partition_name} para el mes {first_day.strftime('%Y-%m')}...")
-        create_query = f"""
-            CREATE TABLE IF NOT EXISTS {partition_name} PARTITION OF fact_heatmap_snapshot
-            FOR VALUES FROM (%s) TO (%s)
-        """
-        conn.execute_query(create_query, (first_day, next_month))
+    if create_partition(conn, "fact_heatmap_snapshot", partition_name, first_day, next_month):
         logger.info(f"Partición {partition_name} creada exitosamente")
     else:
         logger.debug(f"Partición {partition_name} ya existe")
@@ -163,6 +156,7 @@ def process_heatmap_data(conn: PostgreSQLConnector, data: List[Dict]) -> int:
 
         raw_metadata = {
             "asset_class": parsed.get('asset_class'),
+            "share_class": parsed.get('share_class'),
             "sector": parsed.get('sector'),
             "company_name": parsed.get('company_name'),
             "logo": parsed.get('logo'),
@@ -172,7 +166,7 @@ def process_heatmap_data(conn: PostgreSQLConnector, data: List[Dict]) -> int:
         fact_params.append((
             asset_id,
             timestamp_utc,
-            parsed.get('price'),
+            parsed.get('price_heatmap'),
             parsed.get('daily_change_pct'),
             parsed.get('market_cap'),
             parsed.get('stream_status'),
@@ -189,11 +183,11 @@ def process_heatmap_data(conn: PostgreSQLConnector, data: List[Dict]) -> int:
     # --- 3. Inserción batch con UPSERT ---
     insert_heatmap = """
         INSERT INTO fact_heatmap_snapshot (
-            asset_id, timestamp_utc, price, daily_change_pct,
+            asset_id, timestamp_utc, price_heatmap, daily_change_pct,
             market_cap, stream_status, raw_vector, raw_metadata
         ) VALUES %s
         ON CONFLICT (asset_id, timestamp_utc) DO UPDATE SET
-            price = EXCLUDED.price,
+            price_heatmap = EXCLUDED.price_heatmap,
             daily_change_pct = EXCLUDED.daily_change_pct,
             market_cap = EXCLUDED.market_cap,
             stream_status = EXCLUDED.stream_status,

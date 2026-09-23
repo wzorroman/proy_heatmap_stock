@@ -183,3 +183,4 @@ pyrightconfig.json
 .vscode/*
 
 proy_heatmap/LOGS/*
+proy_scrapping_detail/venv/*

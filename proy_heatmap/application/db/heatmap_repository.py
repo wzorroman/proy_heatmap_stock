@@ -7,18 +7,22 @@ from typing import List, Dict
 from db.postgresql_connection import PostgreSQLConnector
 
 
+# Taxonomía visible en el heatmap (excluye activos del radar V4: crypto, fx, futuros…)
+ASSET_CLASSES_HEATMAP = ('equity', 'etf')
+
+
 def get_heatmap_last_hour(conn: PostgreSQLConnector) -> List[Dict]:
     query = """
         SELECT
             symbol, ticker, sector, company_name,
-            price, daily_change_pct, market_cap, timestamp_utc
+            price_heatmap, daily_change_pct, market_cap, timestamp_utc
         FROM (
             SELECT DISTINCT ON (a.symbol)
                 a.symbol,
                 a.ticker,
                 a.sector,
                 a.company_name,
-                h.price,
+                h.price_heatmap,
                 h.daily_change_pct,
                 h.market_cap,
                 h.timestamp_utc
@@ -27,6 +31,7 @@ def get_heatmap_last_hour(conn: PostgreSQLConnector) -> List[Dict]:
             WHERE h.timestamp_utc >= NOW() - INTERVAL '1 hour'
               AND a.is_active = TRUE
               AND a.current_version = TRUE
+              AND a.asset_class IN ('equity', 'etf')
             ORDER BY a.symbol, h.timestamp_utc DESC
         ) latest
         ORDER BY market_cap DESC NULLS LAST;
@@ -41,6 +46,7 @@ def get_sectors(conn: PostgreSQLConnector) -> List[str]:
         WHERE sector IS NOT NULL
           AND is_active = TRUE
           AND current_version = TRUE
+          AND asset_class IN ('equity', 'etf')
         ORDER BY sector;
     """
     result = conn.execute_query(query)
@@ -54,16 +60,17 @@ def get_heatmap_stats(conn: PostgreSQLConnector) -> Dict:
             COUNT(*) FILTER (WHERE daily_change_pct > 0) AS stocks_up,
             COUNT(*) FILTER (WHERE daily_change_pct < 0) AS stocks_down,
             COUNT(*) FILTER (WHERE daily_change_pct = 0) AS stocks_neutral,
-            ROUND(AVG(price)::numeric, 2) AS avg_price,
+            ROUND(AVG(price_heatmap)::numeric, 2) AS avg_price,
             ROUND(AVG(daily_change_pct)::numeric, 4) AS avg_change_pct
         FROM (
             SELECT DISTINCT ON (a.symbol)
-                h.price, h.daily_change_pct
+                h.price_heatmap, h.daily_change_pct
             FROM fact_heatmap_snapshot h
             JOIN dim_asset a ON h.asset_id = a.asset_id
             WHERE h.timestamp_utc >= NOW() - INTERVAL '1 hour'
               AND a.is_active = TRUE
               AND a.current_version = TRUE
+              AND a.asset_class IN ('equity', 'etf')
             ORDER BY a.symbol, h.timestamp_utc DESC
         ) latest;
     """
@@ -76,7 +83,7 @@ def get_price_evolution(conn: PostgreSQLConnector, lookback_hours: int = 1, max_
         WITH ranked AS (
             SELECT
                 a.symbol, a.ticker, a.sector, a.company_name,
-                h.price, h.daily_change_pct, h.market_cap, h.timestamp_utc,
+                h.price_heatmap, h.daily_change_pct, h.market_cap, h.timestamp_utc,
                 ROW_NUMBER() OVER (
                     PARTITION BY a.symbol
                     ORDER BY h.timestamp_utc DESC
@@ -86,9 +93,10 @@ def get_price_evolution(conn: PostgreSQLConnector, lookback_hours: int = 1, max_
             WHERE h.timestamp_utc >= NOW() - make_interval(hours => %s)
               AND a.is_active = TRUE
               AND a.current_version = TRUE
+              AND a.asset_class IN ('equity', 'etf')
         )
         SELECT symbol, ticker, sector, company_name,
-               price, daily_change_pct, market_cap, timestamp_utc, rn
+               price_heatmap, daily_change_pct, market_cap, timestamp_utc, rn
         FROM ranked
         WHERE rn <= %s
         ORDER BY market_cap DESC NULLS LAST, symbol, rn;

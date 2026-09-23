@@ -1,0 +1,95 @@
+{
+  "D_update_mode": {
+    "NASDAQ:NVDA": {
+      "update_mode": "delayed_streaming_900",
+      "close": 227.38
+    },
+    "AMEX:SPY": {
+      "update_mode": "delayed_streaming_900",
+      "close": 773.5
+    },
+    "NASDAQ:QQQ": {
+      "update_mode": "delayed_streaming_900",
+      "close": 741.47
+    },
+    "TVC:VIX": {
+      "update_mode": "streaming",
+      "close": 14.86
+    },
+    "CBOE:VX1!": {
+      "update_mode": "delayed_streaming_900",
+      "close": 17.82
+    },
+    "CME_MINI:ES1!": {
+      "update_mode": "delayed_streaming_600",
+      "close": 7835
+    },
+    "CME_MINI:NQ1!": {
+      "update_mode": "delayed_streaming_600",
+      "close": 30835.75
+    },
+    "BINANCE:BTCUSDT": {
+      "update_mode": "streaming",
+      "close": 85559.54
+    }
+  },
+  "F_fx_equivalence": {
+    "FX:EURUSD": {
+      "close": 1.14763,
+      "volume": 22504,
+      "update_mode": "streaming",
+      "change": 0.10816563298702081
+    },
+    "FX_IDC:EURUSD": {
+      "close": 1.14762,
+      "volume": 0,
+      "update_mode": "streaming",
+      "change": 0.09943479171029071
+    },
+    "OANDA:EURUSD": {
+      "close": 1.14764,
+      "volume": 14911,
+      "update_mode": "streaming",
+      "change": 0.1081646894626577
+    }
+  },
+  "G_scan_post": {
+    "_error": "HTTP 404",
+    "_body": "404 page not found\n"
+  },
+  "H_pivots": {
+    "NASDAQ:NVDA": {
+      "Pivot.M.Camarilla.R3": 230.0255,
+      "Pivot.M.Camarilla.R3|5": 223.3725,
+      "Pivot.M.Camarilla.R3|15": 223.3725,
+      "Pivot.M.Camarilla.R3|30": 225.875,
+      "Pivot.M.Camarilla.R3|60": 225.875,
+      "Pivot.D.Camarilla.R3": null,
+      "Pivot.W.Camarilla.R3": null,
+      "Pivot.D.Camarilla.R3|15": null,
+      "Pivot.W.Camarilla.R3|15": null
+    },
+    "AMEX:SPY": {
+      "Pivot.M.Camarilla.R3": 775.4567499999999,
+      "Pivot.M.Camarilla.R3|5": 762.747975,
+      "Pivot.M.Camarilla.R3|15": 762.747975,
+      "Pivot.M.Camarilla.R3|30": 765.48175,
+      "Pivot.M.Camarilla.R3|60": 765.48175,
+      "Pivot.D.Camarilla.R3": null,
+      "Pivot.W.Camarilla.R3": null,
+      "Pivot.D.Camarilla.R3|15": null,
+      "Pivot.W.Camarilla.R3|15": null
+    },
+    "NASDAQ:QQQ": {
+      "Pivot.M.Camarilla.R3": 730.169,
+      "Pivot.M.Camarilla.R3|5": 723.16875,
+      "Pivot.M.Camarilla.R3|15": 723.16875,
+      "Pivot.M.Camarilla.R3|30": 727.3157500000001,
+      "Pivot.M.Camarilla.R3|60": 727.3157500000001,
+      "Pivot.D.Camarilla.R3": null,
+      "Pivot.W.Camarilla.R3": null,
+      "Pivot.D.Camarilla.R3|15": null,
+      "Pivot.W.Camarilla.R3|15": null
+    }
+  }
+}

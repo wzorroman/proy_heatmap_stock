@@ -11,6 +11,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'
 import config
 from db.postgresql_connection import PostgreSQLConnector
 from application.db.heatmap_repository import (
+    ASSET_CLASSES_HEATMAP,
     get_heatmap_last_hour,
     get_sectors,
     get_heatmap_stats,
@@ -100,15 +101,15 @@ def fetch_price_evolution(lookback_hours: int = 1, max_snapshots: int = 6) -> Li
     for symbol, snapshots in by_symbol.items():
         snapshots.sort(key=lambda r: r['timestamp_utc'], reverse=True)
         base = snapshots[0]
-        prev_price = snapshots[1]['price'] if len(snapshots) > 1 else None
+        prev_price = snapshots[1]['price_heatmap'] if len(snapshots) > 1 else None
 
         arrow = ""
         direction = 0
-        if prev_price is not None and base['price'] is not None:
-            if base['price'] > prev_price:
+        if prev_price is not None and base['price_heatmap'] is not None:
+            if base['price_heatmap'] > prev_price:
                 arrow = "\U0001F7E2 \u2191"
                 direction = 1
-            elif base['price'] < prev_price:
+            elif base['price_heatmap'] < prev_price:
                 arrow = "\U0001F534 \u2193"
                 direction = -1
             else:
@@ -117,7 +118,7 @@ def fetch_price_evolution(lookback_hours: int = 1, max_snapshots: int = 6) -> Li
         row_data = {
             'symbol': symbol,
             'asset': _build_asset_label(base),
-            'price': base['price'],
+            'price_heatmap': base['price_heatmap'],
             'arrow': arrow,
             'direction': direction,
             'daily_change_pct': base['daily_change_pct'],
@@ -126,6 +127,6 @@ def fetch_price_evolution(lookback_hours: int = 1, max_snapshots: int = 6) -> Li
         }
         for snap in snapshots:
             label = snap['timestamp_utc'].strftime('%H:%M')
-            row_data[label] = snap['price']
+            row_data[label] = snap['price_heatmap']
         result.append(row_data)
     return result

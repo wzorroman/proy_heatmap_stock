@@ -1,0 +1,7 @@
+requests
+pandas
+tabulate
+python-telegram-bot==22.6
+python-dotenv
+psycopg2-binary>=2.9.9
+# sudo apt-get install expect

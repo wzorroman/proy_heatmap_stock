@@ -56,18 +56,24 @@ from db.postgresql_connection import PostgreSQLConnector
 logger = get_logger('create_partitions')
 
 TABLAS_POR_DEFECTO = ["fact_heatmap_snapshot", "fact_market_series"]
+# Tablas cuyas particiones requieren índice BRIN por timestamp_utc
+# (PostgreSQL 15 no propaga BRIN desde el padre; se crea por partición).
+BRIN_TABLES = ["fact_market_series"]
 SCHEMA = "public"
 
 
 def _extract_bounds(result) -> Optional[str]:
-    """Extrae 'bounds' de cualquier estructura que devuelva el conector."""
+    """Extrae el primer valor escalar de cualquier estructura que devuelva el conector."""
     if not result:
         return None
     row = result[0]
     if row is None:
         return None
     if isinstance(row, dict):
-        return row.get('bounds')
+        for key in ('bounds', 'reg'):
+            if key in row:
+                return row[key]
+        return next(iter(row.values()), None)
     if isinstance(row, (tuple, list)):
         return row[0] if row else None
     return None  # e.g., una cadena suelta u otro tipo
@@ -88,12 +94,26 @@ def partition_exists(conn, table_name, partition_name, start_date, end_date) -> 
     actual = _extract_bounds(result)
 
     if actual:
-        # Tolerante al TimeZone del servidor: puede venir como '+00' o '-05'
+        # Tolerante al TimeZone del servidor: el límite puede renderizarse como
+        # '+00' (UTC) o '-05' (local). Se valida por año/mes/día en vez de
+        # comparar instantes exactos, evitando falsos "rango distinto".
         m = re.search(r"FROM \('([^']+)'\) TO \('([^']+)'\)", actual)
         if m:
-            b_from = datetime.fromisoformat(m.group(1))
-            b_to = datetime.fromisoformat(m.group(2))
-            if b_from == start_date and b_to == end_date:
+            try:
+                b_from = datetime.fromisoformat(m.group(1))
+                b_to = datetime.fromisoformat(m.group(2))
+            except ValueError:
+                b_from = b_to = None
+            expected_year, expected_month = start_date.year, start_date.month
+            expected_to_year = expected_year + (1 if expected_month == 12 else 0)
+            expected_to_month = (expected_month % 12) + 1
+            if (b_from is not None and b_to is not None
+                    and b_from.year == expected_year
+                    and b_from.month == expected_month
+                    and b_from.day == 1
+                    and b_to.year == expected_to_year
+                    and b_to.month == expected_to_month
+                    and b_to.day == 1):
                 return True
 
     if actual is None and not result:
@@ -120,6 +140,17 @@ def partition_exists(conn, table_name, partition_name, start_date, end_date) -> 
     return False
 
 
+def ensure_brin_for_partition(conn: PostgreSQLConnector, table_name: str, partition_name: str) -> None:
+    """Crea el índice BRIN por timestamp_utc en la partición si aplica."""
+    if table_name not in BRIN_TABLES:
+        return
+    index_name = f"{partition_name}_ts_brin"
+    conn.execute_query(
+        f"CREATE INDEX IF NOT EXISTS {index_name} ON {partition_name} USING BRIN (timestamp_utc)"
+    )
+    logger.debug(f"✅ BRIN {index_name} asegurado sobre {partition_name}")
+
+
 def create_partition(conn: PostgreSQLConnector, table_name: str, partition_name: str,
                      start_date: datetime, end_date: datetime) -> bool:
     """Crea una partición mensual si no existe."""
@@ -133,6 +164,7 @@ def create_partition(conn: PostgreSQLConnector, table_name: str, partition_name:
     """
     conn.execute_query(create_query, (start_date, end_date))
     logger.info(f"✅ Partición {partition_name} creada ({start_date.date()} - {end_date.date()})")
+    ensure_brin_for_partition(conn, table_name, partition_name)
     return True
 
 

@@ -1,0 +1,1300 @@
+{
+  "J_filter_timeframes": {
+    "cambio sin TF (RSI>60)": {
+      "left": "RSI",
+      "right": 60,
+      "n_matches": 1
+    },
+    "RSI|15 > 60": {
+      "left": "RSI|15",
+      "right": 60,
+      "n_matches": 1
+    },
+    "RSI|60 > 60": {
+      "left": "RSI|60",
+      "right": 60,
+      "n_matches": 3
+    },
+    "close > 700": {
+      "left": "close",
+      "right": 700,
+      "n_matches": 2
+    },
+    "close|15 > 700": {
+      "left": "close|15",
+      "right": 700,
+      "n_matches": 2
+    },
+    "volume|15 > 1e6": {
+      "left": "volume|15",
+      "right": 1000000.0,
+      "n_matches": 3
+    },
+    "change|15 > 0": {
+      "left": "change|15",
+      "right": 0,
+      "n_matches": 0
+    },
+    "ADX|15 > 25": {
+      "left": "ADX|15",
+      "right": 25,
+      "n_matches": 3
+    },
+    "MACD.macd|15 > 0": {
+      "left": "MACD.macd|15",
+      "right": 0,
+      "n_matches": 3
+    },
+    "J2": {
+      "NASDAQ:NVDA": {
+        "symbol": "NASDAQ:NVDA",
+        "close": 228.87,
+        "RSI|15": 53.47086925068122,
+        "RSI|60": 74.57356972218204,
+        "volume|15": 4805009
+      },
+      "AMEX:SPY": {
+        "symbol": "AMEX:SPY",
+        "close": 773.38,
+        "RSI|15": 50.17022572802889,
+        "RSI|60": 67.43310690197296,
+        "volume|15": 2695849
+      },
+      "NASDAQ:QQQ": {
+        "symbol": "NASDAQ:QQQ",
+        "close": 747.46,
+        "RSI|15": 75.23819806277275,
+        "RSI|60": 83.29913155028886,
+        "volume|15": 2329908
+      }
+    },
+    "J3": {
+      "overview": {
+        "n_base": 3,
+        "n_TF15": 3
+      }
+    }
+  },
+  "K_timeframe_catalog": {
+    "RSI": {
+      "1": {
+        "n_lo": 3,
+        "n_hi": 0,
+        "works": true
+      },
+      "2": {
+        "n_lo": 0,
+        "n_hi": 0,
+        "works": false
+      },
+      "3": {
+        "n_lo": 0,
+        "n_hi": 0,
+        "works": false
+      },
+      "5": {
+        "n_lo": 3,
+        "n_hi": 0,
+        "works": true
+      },
+      "10": {
+        "n_lo": 0,
+        "n_hi": 0,
+        "works": false
+      },
+      "15": {
+        "n_lo": 3,
+        "n_hi": 0,
+        "works": true
+      },
+      "30": {
+        "n_lo": 3,
+        "n_hi": 0,
+        "works": true
+      },
+      "45": {
+        "n_lo": 0,
+        "n_hi": 0,
+        "works": false
+      },
+      "60": {
+        "n_lo": 3,
+        "n_hi": 0,
+        "works": true
+      },
+      "120": {
+        "n_lo": 3,
+        "n_hi": 0,
+        "works": true
+      },
+      "180": {
+        "n_lo": 0,
+        "n_hi": 0,
+        "works": false
+      },
+      "240": {
+        "n_lo": 3,
+        "n_hi": 0,
+        "works": true
+      },
+      "360": {
+        "n_lo": 0,
+        "n_hi": 0,
+        "works": false
+      },
+      "720": {
+        "n_lo": 0,
+        "n_hi": 0,
+        "works": false
+      },
+      "1D": {
+        "n_lo": 0,
+        "n_hi": 0,
+        "works": false
+      },
+      "2D": {
+        "n_lo": 0,
+        "n_hi": 0,
+        "works": false
+      },
+      "1W": {
+        "n_lo": 3,
+        "n_hi": 0,
+        "works": true
+      },
+      "1M": {
+        "n_lo": 3,
+        "n_hi": 0,
+        "works": true
+      }
+    },
+    "ADX": {
+      "1": {
+        "n_lo": 3,
+        "n_hi": 0,
+        "works": true
+      },
+      "2": {
+        "n_lo": 0,
+        "n_hi": 0,
+        "works": false
+      },
+      "3": {
+        "n_lo": 0,
+        "n_hi": 0,
+        "works": false
+      },
+      "5": {
+        "n_lo": 3,
+        "n_hi": 0,
+        "works": true
+      },
+      "10": {
+        "n_lo": 0,
+        "n_hi": 0,
+        "works": false
+      },
+      "15": {
+        "n_lo": 3,
+        "n_hi": 0,
+        "works": true
+      },
+      "30": {
+        "n_lo": 3,
+        "n_hi": 0,
+        "works": true
+      },
+      "45": {
+        "n_lo": 0,
+        "n_hi": 0,
+        "works": false
+      },
+      "60": {
+        "n_lo": 3,
+        "n_hi": 0,
+        "works": true
+      },
+      "120": {
+        "n_lo": 3,
+        "n_hi": 0,
+        "works": true
+      },
+      "180": {
+        "n_lo": 0,
+        "n_hi": 0,
+        "works": false
+      },
+      "240": {
+        "n_lo": 3,
+        "n_hi": 0,
+        "works": true
+      },
+      "360": {
+        "n_lo": 0,
+        "n_hi": 0,
+        "works": false
+      },
+      "720": {
+        "n_lo": 0,
+        "n_hi": 0,
+        "works": false
+      },
+      "1D": {
+        "n_lo": 0,
+        "n_hi": 0,
+        "works": false
+      },
+      "2D": {
+        "n_lo": 0,
+        "n_hi": 0,
+        "works": false
+      },
+      "1W": {
+        "n_lo": 3,
+        "n_hi": 0,
+        "works": true
+      },
+      "1M": {
+        "n_lo": 3,
+        "n_hi": 0,
+        "works": true
+      }
+    },
+    "volume": {
+      "1": {
+        "n_lo": 3,
+        "n_hi": 0,
+        "works": true
+      },
+      "2": {
+        "n_lo": 0,
+        "n_hi": 0,
+        "works": false
+      },
+      "3": {
+        "n_lo": 0,
+        "n_hi": 0,
+        "works": false
+      },
+      "5": {
+        "n_lo": 3,
+        "n_hi": 0,
+        "works": true
+      },
+      "10": {
+        "n_lo": 0,
+        "n_hi": 0,
+        "works": false
+      },
+      "15": {
+        "n_lo": 3,
+        "n_hi": 0,
+        "works": true
+      },
+      "30": {
+        "n_lo": 3,
+        "n_hi": 0,
+        "works": true
+      },
+      "45": {
+        "n_lo": 0,
+        "n_hi": 0,
+        "works": false
+      },
+      "60": {
+        "n_lo": 3,
+        "n_hi": 0,
+        "works": true
+      },
+      "120": {
+        "n_lo": 3,
+        "n_hi": 0,
+        "works": true
+      },
+      "180": {
+        "n_lo": 0,
+        "n_hi": 0,
+        "works": false
+      },
+      "240": {
+        "n_lo": 3,
+        "n_hi": 0,
+        "works": true
+      },
+      "360": {
+        "n_lo": 0,
+        "n_hi": 0,
+        "works": false
+      },
+      "720": {
+        "n_lo": 0,
+        "n_hi": 0,
+        "works": false
+      },
+      "1D": {
+        "n_lo": 0,
+        "n_hi": 0,
+        "works": false
+      },
+      "2D": {
+        "n_lo": 0,
+        "n_hi": 0,
+        "works": false
+      },
+      "1W": {
+        "n_lo": 3,
+        "n_hi": 0,
+        "works": true
+      },
+      "1M": {
+        "n_lo": 3,
+        "n_hi": 1,
+        "works": true
+      }
+    },
+    "MACD.macd": {
+      "1": {
+        "n_lo": 3,
+        "n_hi": 0,
+        "works": true
+      },
+      "2": {
+        "n_lo": 0,
+        "n_hi": 0,
+        "works": false
+      },
+      "3": {
+        "n_lo": 0,
+        "n_hi": 0,
+        "works": false
+      },
+      "5": {
+        "n_lo": 3,
+        "n_hi": 0,
+        "works": true
+      },
+      "10": {
+        "n_lo": 0,
+        "n_hi": 0,
+        "works": false
+      },
+      "15": {
+        "n_lo": 3,
+        "n_hi": 0,
+        "works": true
+      },
+      "30": {
+        "n_lo": 3,
+        "n_hi": 0,
+        "works": true
+      },
+      "45": {
+        "n_lo": 0,
+        "n_hi": 0,
+        "works": false
+      },
+      "60": {
+        "n_lo": 3,
+        "n_hi": 0,
+        "works": true
+      },
+      "120": {
+        "n_lo": 3,
+        "n_hi": 0,
+        "works": true
+      },
+      "180": {
+        "n_lo": 0,
+        "n_hi": 0,
+        "works": false
+      },
+      "240": {
+        "n_lo": 3,
+        "n_hi": 0,
+        "works": true
+      },
+      "360": {
+        "n_lo": 0,
+        "n_hi": 0,
+        "works": false
+      },
+      "720": {
+        "n_lo": 0,
+        "n_hi": 0,
+        "works": false
+      },
+      "1D": {
+        "n_lo": 0,
+        "n_hi": 0,
+        "works": false
+      },
+      "2D": {
+        "n_lo": 0,
+        "n_hi": 0,
+        "works": false
+      },
+      "1W": {
+        "n_lo": 3,
+        "n_hi": 0,
+        "works": true
+      },
+      "1M": {
+        "n_lo": 3,
+        "n_hi": 0,
+        "works": true
+      }
+    }
+  },
+  "L_field_discovery": {
+    "RSI": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "RSI7": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "ADX": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "CCI20": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "BBPower": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "ATR": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "MACD.macd": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "MACD.signal": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "MACD.hist": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "Stoch.K": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "Stoch.D": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "W.R": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "Mom": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "Momentum": {
+      "columna_existe": true,
+      "filtrante_exacto": false,
+      "n_gt_-1e9": 0,
+      "n_gt_+1e9": 0,
+      "alt_oper": "less",
+      "alt_n": 0
+    },
+    "ROC": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "ROC21": {
+      "columna_existe": true,
+      "filtrante_exacto": false,
+      "n_gt_-1e9": 0,
+      "n_gt_+1e9": 0,
+      "alt_oper": "less",
+      "alt_n": 0
+    },
+    "TRIX": {
+      "columna_existe": true,
+      "filtrante_exacto": false,
+      "n_gt_-1e9": 0,
+      "n_gt_+1e9": 0,
+      "alt_oper": "less",
+      "alt_n": 0
+    },
+    "Volatility.D": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "Volatility.W": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "Volatility.M": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "P.SAR": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "DMI.PDI": {
+      "columna_existe": true,
+      "filtrante_exacto": false,
+      "n_gt_-1e9": 0,
+      "n_gt_+1e9": 0,
+      "alt_oper": "less",
+      "alt_n": 0
+    },
+    "DMI.MDI": {
+      "columna_existe": true,
+      "filtrante_exacto": false,
+      "n_gt_-1e9": 0,
+      "n_gt_+1e9": 0,
+      "alt_oper": "less",
+      "alt_n": 0
+    },
+    "DMI.DX": {
+      "columna_existe": true,
+      "filtrante_exacto": false,
+      "n_gt_-1e9": 0,
+      "n_gt_+1e9": 0,
+      "alt_oper": "less",
+      "alt_n": 0
+    },
+    "Perf.D": {
+      "columna_existe": true,
+      "filtrante_exacto": false,
+      "n_gt_-1e9": 0,
+      "n_gt_+1e9": 0,
+      "alt_oper": "less",
+      "alt_n": 0
+    },
+    "Perf.W": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "Perf.1M": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "Perf.3M": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "Perf.6M": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "Perf.Y": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "Perf.YTD": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "RelVol": {
+      "columna_existe": true,
+      "filtrante_exacto": false,
+      "n_gt_-1e9": 0,
+      "n_gt_+1e9": 0,
+      "alt_oper": "less",
+      "alt_n": 0
+    },
+    "RelVolume_10d_calc": {
+      "columna_existe": true,
+      "filtrante_exacto": false,
+      "n_gt_-1e9": 0,
+      "n_gt_+1e9": 0,
+      "alt_oper": "less",
+      "alt_n": 0
+    },
+    "close": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "open": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "high": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "low": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "volume": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "Value.Traded": {
+      "columna_existe": true,
+      "filtrante_exacto": false,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 3,
+      "alt_oper": "less",
+      "alt_n": 0
+    },
+    "change": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "change_abs": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "price_52_week_high": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "price_52_week_low": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "average_volume_10d_calc": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "average_volume_30d_calc": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "market_cap_basic": {
+      "columna_existe": true,
+      "filtrante_exacto": false,
+      "n_gt_-1e9": 1,
+      "n_gt_+1e9": 1,
+      "alt_oper": "less",
+      "alt_n": 0
+    },
+    "total_shares_outstanding": {
+      "columna_existe": true,
+      "filtrante_exacto": false,
+      "n_gt_-1e9": 1,
+      "n_gt_+1e9": 1,
+      "alt_oper": "less",
+      "alt_n": 0
+    },
+    "float_shares_outstanding": {
+      "columna_existe": true,
+      "filtrante_exacto": false,
+      "n_gt_-1e9": 1,
+      "n_gt_+1e9": 1,
+      "alt_oper": "less",
+      "alt_n": 0
+    },
+    "number_of_employees": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 1,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "earnings_per_share_basic_ttm": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 1,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "revenue_per_share_ttm": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 1,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "operating_margin_ttm": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 1,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "gross_margin_ttm": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 1,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "net_margin_ttm": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 1,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "P/E": {
+      "columna_existe": true,
+      "filtrante_exacto": false,
+      "n_gt_-1e9": 0,
+      "n_gt_+1e9": 0,
+      "alt_oper": "less",
+      "alt_n": 0
+    },
+    "P/S": {
+      "columna_existe": true,
+      "filtrante_exacto": false,
+      "n_gt_-1e9": 0,
+      "n_gt_+1e9": 0,
+      "alt_oper": "less",
+      "alt_n": 0
+    },
+    "P/B": {
+      "columna_existe": true,
+      "filtrante_exacto": false,
+      "n_gt_-1e9": 0,
+      "n_gt_+1e9": 0,
+      "alt_oper": "less",
+      "alt_n": 0
+    },
+    "Beta_1Y": {
+      "columna_existe": true,
+      "filtrante_exacto": false,
+      "n_gt_-1e9": 0,
+      "n_gt_+1e9": 0,
+      "alt_oper": "less",
+      "alt_n": 0
+    },
+    "target_mean_price": {
+      "columna_existe": true,
+      "filtrante_exacto": false,
+      "n_gt_-1e9": 0,
+      "n_gt_+1e9": 0,
+      "alt_oper": "less",
+      "alt_n": 0
+    },
+    "pricescale": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "min_move": {
+      "columna_existe": true,
+      "filtrante_exacto": false,
+      "n_gt_-1e9": 0,
+      "n_gt_+1e9": 0,
+      "alt_oper": "less",
+      "alt_n": 0
+    },
+    "financial_rating": {
+      "columna_existe": true,
+      "filtrante_exacto": false,
+      "n_gt_-1e9": 0,
+      "n_gt_+1e9": 0,
+      "alt_oper": "less",
+      "alt_n": 0
+    },
+    "Pivot.M.Classic.R1": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "Pivot.M.Camarilla.R1": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "Pivot.M.Camarilla.R3": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "Pivot.D.Camarilla.R3": {
+      "columna_existe": true,
+      "filtrante_exacto": false,
+      "n_gt_-1e9": 0,
+      "n_gt_+1e9": 0,
+      "alt_oper": "less",
+      "alt_n": 0
+    },
+    "Pivot.W.Camarilla.R3": {
+      "columna_existe": true,
+      "filtrante_exacto": false,
+      "n_gt_-1e9": 0,
+      "n_gt_+1e9": 0,
+      "alt_oper": "less",
+      "alt_n": 0
+    },
+    "Recommend.All": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "Analyst.Op.Recom": {
+      "columna_existe": true,
+      "filtrante_exacto": false,
+      "n_gt_-1e9": 0,
+      "n_gt_+1e9": 0,
+      "alt_oper": "less",
+      "alt_n": 0
+    },
+    "EMA10": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "EMA20": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "EMA50": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "SMA10": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "SMA20": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "SMA50": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "BB.upper": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "BB.lower": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "BB.middle": {
+      "columna_existe": true,
+      "filtrante_exacto": false,
+      "n_gt_-1e9": 0,
+      "n_gt_+1e9": 0,
+      "alt_oper": "less",
+      "alt_n": 0
+    },
+    "gap": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "premarket_close": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "premarket_change": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "premarket_volume": {
+      "columna_existe": true,
+      "filtrante_exacto": true,
+      "n_gt_-1e9": 3,
+      "n_gt_+1e9": 0,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "update_mode": {
+      "columna_existe": false,
+      "filtrante_exacto": false,
+      "n_gt_-1e9": -1,
+      "n_gt_+1e9": -1,
+      "alt_oper": null,
+      "alt_n": null
+    },
+    "_resumen": {
+      "filtrables": [
+        "RSI",
+        "RSI7",
+        "ADX",
+        "CCI20",
+        "BBPower",
+        "ATR",
+        "MACD.macd",
+        "MACD.signal",
+        "MACD.hist",
+        "Stoch.K",
+        "Stoch.D",
+        "W.R",
+        "Mom",
+        "ROC",
+        "Volatility.D",
+        "Volatility.W",
+        "Volatility.M",
+        "P.SAR",
+        "Perf.W",
+        "Perf.1M",
+        "Perf.3M",
+        "Perf.6M",
+        "Perf.Y",
+        "Perf.YTD",
+        "close",
+        "open",
+        "high",
+        "low",
+        "volume",
+        "change",
+        "change_abs",
+        "price_52_week_high",
+        "price_52_week_low",
+        "average_volume_10d_calc",
+        "average_volume_30d_calc",
+        "number_of_employees",
+        "earnings_per_share_basic_ttm",
+        "revenue_per_share_ttm",
+        "operating_margin_ttm",
+        "gross_margin_ttm",
+        "net_margin_ttm",
+        "pricescale",
+        "Pivot.M.Classic.R1",
+        "Pivot.M.Camarilla.R1",
+        "Pivot.M.Camarilla.R3",
+        "Recommend.All",
+        "EMA10",
+        "EMA20",
+        "EMA50",
+        "SMA10",
+        "SMA20",
+        "SMA50",
+        "BB.upper",
+        "BB.lower",
+        "gap",
+        "premarket_close",
+        "premarket_change",
+        "premarket_volume"
+      ],
+      "existentes_no_discriminan": [
+        "Momentum",
+        "ROC21",
+        "TRIX",
+        "DMI.PDI",
+        "DMI.MDI",
+        "DMI.DX",
+        "Perf.D",
+        "RelVol",
+        "RelVolume_10d_calc",
+        "Value.Traded",
+        "market_cap_basic",
+        "total_shares_outstanding",
+        "float_shares_outstanding",
+        "P/E",
+        "P/S",
+        "P/B",
+        "Beta_1Y",
+        "target_mean_price",
+        "min_move",
+        "financial_rating",
+        "Pivot.D.Camarilla.R3",
+        "Pivot.W.Camarilla.R3",
+        "Analyst.Op.Recom",
+        "BB.middle"
+      ],
+      "inexistentes": [
+        "update_mode"
+      ]
+    }
+  },
+  "M_full_universe": {
+    "totalCount_RSI15_gt70": 1078,
+    "rows": [
+      {
+        "symbol": "NYSE:TSM",
+        "name": "TSM",
+        "close": 452,
+        "RSI|15": 81.33316992833163,
+        "volume|15": 1096215,
+        "market_cap": 2024293182654.3748,
+        "change": 1.5410881969717425
+      },
+      {
+        "symbol": "NASDAQ:MU",
+        "name": "MU",
+        "close": 1096.16,
+        "RSI|15": 74.1234290805075,
+        "volume|15": 1490345,
+        "market_cap": 1237995457349.4985,
+        "change": 5.000191578221392
+      },
+      {
+        "symbol": "NASDAQ:AMD",
+        "name": "AMD",
+        "close": 623.77,
+        "RSI|15": 70.69170165912072,
+        "volume|15": 1245581,
+        "market_cap": 1018288947832.9395,
+        "change": 1.3403301273719783
+      },
+      {
+        "symbol": "NASDAQ:WMT",
+        "name": "WMT",
+        "close": 110.12,
+        "RSI|15": 72.93656747486169,
+        "volume|15": 1933815,
+        "market_cap": 873664139696.4059,
+        "change": 2.4944154877140794
+      },
+      {
+        "symbol": "NASDAQ:INTC",
+        "name": "INTC",
+        "close": 123.86,
+        "RSI|15": 70.49584977627573,
+        "volume|15": 6225513,
+        "market_cap": 654737016796.7935,
+        "change": 1.707998029233042
+      },
+      {
+        "symbol": "NASDAQ:ASML",
+        "name": "ASML",
+        "close": 1747.9,
+        "RSI|15": 72.68777609279257,
+        "volume|15": 87026,
+        "market_cap": 648823515151.728,
+        "change": 2.1375312624173244
+      },
+      {
+        "symbol": "OTC:TCEHY",
+        "name": "TCEHY",
+        "close": 57.91,
+        "RSI|15": 73.50058445948295,
+        "volume|15": 110469,
+        "market_cap": 493791881988.1337,
+        "change": 3.6884512085944405
+      },
+      {
+        "symbol": "NASDAQ:LRCX",
+        "name": "LRCX",
+        "close": 310.96,
+        "RSI|15": 73.80904370816353,
+        "volume|15": 626360,
+        "market_cap": 389110790557.0457,
+        "change": 2.8715098584094245
+      },
+      {
+        "symbol": "NASDAQ:ARM",
+        "name": "ARM",
+        "close": 333.2,
+        "RSI|15": 70.0286725003687,
+        "volume|15": 317176,
+        "market_cap": 344857193481,
+        "change": 3.189842056364203
+      },
+      {
+        "symbol": "NASDAQ:KLAC",
+        "name": "KLAC",
+        "close": 188.32,
+        "RSI|15": 71.95620053574181,
+        "volume|15": 1011726,
+        "market_cap": 246048886143.94696,
+        "change": 2.364515953688098
+      }
+    ]
+  }
+}

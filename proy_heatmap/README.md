@@ -8,11 +8,13 @@ y almacena los datos en PostgreSQL.
 | Archivo | Descripcion |
 |---------|-------------|
 | scrapper_heatmap_v1.py | Script principal: consulta endpoint, top 1000 stocks, INSERT en BD |
+| scrapper_heatmap_v0.py | Versión alternativa/legacy de captura (misma BD) |
+| seed_dim_asset.py | Seed de `dim_asset` (CSV 1.005 + radar 110) y `dim_time` 2026-2027 |
 | app.py | Frontend Streamlit (solo llama al servicio) |
 | application/heatmap_service.py | Logica de negocio y transformacion (pivot de precios, labels) |
-| application/db/heatmap_repository.py | Consultas SQL |
+| application/db/heatmap_repository.py | Consultas SQL (filtro `equity/etf`) |
 | config.py | Configuracion (endpoint, headers, columnas, conexion BD) |
-| create_partitions.py | Crea particiones mensuales para tablas de hechos |
+| create_partitions.py | Crea particiones mensuales + BRIN para tablas de hechos |
 | db/postgresql_connection.py | Conector PostgreSQL |
 | utils/config_logging.py | Logger (rotacion diaria, retiene 14 dias) |
 
@@ -55,22 +57,48 @@ tail -f /home/wilson/CODE_MAIN/OPENCODE_WZ/proy_heatmap_stock/logs/cron_heatmap.
 
 **Conexion:** PostgreSQL `heatmap_stock` en `localhost:5432`
 
+### Inicializacion (v1.0.2 — arranque desde BD en blanco)
+
+```bash
+# 1. Crear el esquema completo (DDL del corte 2026-09-11 + share_class + BRIN)
+psql -d heatmap_stock -f scripts/02_init_database.sql
+
+# 2. Sembrar catálogo por defecto (dim_asset + dim_time), antes del primer scraper
+python seed_dim_asset.py            # carga real
+python seed_dim_asset.py --dry-run  # solo conteos
+
+# 3. Crear particiones futuras (mantiene BRIN en fact_market_series)
+python create_partitions.py --all --months 3
+```
+
 ### Tablas principales
 
 | Tabla | Tipo | Descripcion |
 |-------|------|-------------|
-| dim_asset | Dimension | Un registro por simbolo (symbol, ticker, exchange, sector, etc.) |
-| fact_heatmap_snapshot | Hecho (particionada) | Snapshot por simbolo x timestamp. Campos: price, daily_change_pct, market_cap, raw_vector, raw_metadata |
+| dim_asset | Dimension | Activo por simbolo. `asset_class` (taxonomia equity/etf/crypto/...) + `share_class` (common/preferred/unit) + `source_discovered_by` (primer-gana) |
+| dim_country | Dimension | 11 paises del config del radar |
+| dim_time | Dimension | Calendario 2026-2027 (sembrado por `seed_dim_asset.py`) |
+| fact_heatmap_snapshot | Hecho (particionada) | Snapshot por simbolo x timestamp. Campos: price_heatmap, daily_change_pct, market_cap, raw_vector, raw_metadata |
+| fact_market_series | Hecho (particionada) | Series tecnicas del radar V4 (close, rsi, cci20, bbpower, adx...). BRIN por particion |
+| fact_economic_event | Hecho | Calendario economico V4 RAW (`event_id` int64, `importance` -1..3, `actual_raw` float64) |
 | audit_sync_run | Auditoria | Log de cada ejecucion (status, records_fetched, records_upserted) |
+| sync_checkpoint | Control | Checkpoints de reanudacion (`last_event_id` BIGINT) |
 
 ### Particionado
 
 Las tablas de hechos se particionan mensualmente:
 - `fact_heatmap_snapshot_2026_09`
 - `fact_heatmap_snapshot_2026_10`
+- `fact_market_series_2026_09` (+ BRIN `_ts_brin` por particion)
 - ...
 
 Las particiones se crean automaticamente al ejecutar el script.
+
+> **Ingesta externa:** la captura de series del radar (`scraper_live_tradingview_v4.py`)
+> y del calendario V4 (`calendario_tradingview_live_v4.py`) vive en otro proyecto
+> (`app_backup_nasdaq`). Este proyecto **solo provee el esquema base** y el seed.
+> El ETL externo inserta via `upsert_market_series` (lanza error si el activo no
+> esta en `dim_asset`) y `sync_checkpoint.last_event_id` es BIGINT.
 
 ## Datos capturados
 
@@ -123,7 +151,7 @@ Content-Type: application/json
 ## Variables de entorno (.env)
 
 ```
-BD_HEATMAP_SERVER=localhost
+BD_HEATMAP_HOST=localhost
 BD_HEATMAP_PORT=5432
 BD_HEATMAP_DATABASE=heatmap_stock
 BD_HEATMAP_USER=postgres
@@ -218,19 +246,25 @@ Abrir en el navegador: `http://localhost:8501`
 - **Orden**: market cap descendente (desde SQL)
 - **Auto-refresh**: cada 2.5 minutos
 
+> **Nota**: el campo `price` fue renombrado a `price_heatmap` tanto en la
+> columna de la tabla `fact_heatmap_snapshot` como en la capa de aplicacion
+> (repository/service/UI), para identificar que el precio proviene del heatmap.
+> La BD sera llenada por otra aplicacion que compartira campos, por lo que el
+> sufijo evita confusiones al leer los datos.
+
 ### Vista de la tabla
 
 ```
-┌─────────┬──────────────────────────────┬──────────┬──────────┬────────────┬─────────┬─────────┬─────────┐
-│ Symbol  │ Asset                        │ Price    │ Change%  │ Market Cap │ 12:45   │ 12:40   │ 12:35   │
-├─────────┼──────────────────────────────┼──────────┼──────────┼────────────┼─────────┼─────────┼─────────┤
-│ NVDA    │ NVDA [Electronic Technology] │ $218.49  │  +2.35%  │ $5.27T     │ 218.50  │ 218.49  │ 218.42  │
-│ AAPL    │ AAPL [Electronic Technology] │ $323.96  │  +1.12%  │ $4.73T     │ 323.98  │ 323.96  │ 323.97  │
-│ MSFT    │ MSFT [Technology Services]   │ $415.20  │  -0.45%  │ $3.08T     │ 415.21  │ 415.20  │ 415.14  │
-│ AMZN    │ AMZN [Retail Trade]          │ $218.94  │  +1.87%  │ $2.31T     │ 218.93  │ 218.94  │ 218.35  │
-│ TSLA    │ TSLA [Consumer Durables]     │ $345.12  │  -2.15%  │ $1.10T     │ 345.11  │ 345.12  │ 345.80  │
-│ META    │ META [Technology Services]   │ $542.30  │  +0.89%  │ $1.37T     │ 542.31  │ 542.30  │ 542.35  │
-└─────────┴──────────────────────────────┴──────────┴──────────┴────────────┴─────────┴─────────┴─────────┘
+┌─────────┬──────────────────────────────┬───────────────┬──────────┬────────────┬─────────┬─────────┬─────────┐
+│ Symbol  │ Asset                        │ Price Heatmap │ Change%  │ Market Cap │ 12:45   │ 12:40   │ 12:35   │
+├─────────┼──────────────────────────────┼───────────────┼──────────┼────────────┼─────────┼─────────┼─────────┤
+│ NVDA    │ NVDA [Electronic Technology] │ $218.49       │  +2.35%  │ $5.27T     │ 218.50  │ 218.49  │ 218.42  │
+│ AAPL    │ AAPL [Electronic Technology] │ $323.96       │  +1.12%  │ $4.73T     │ 323.98  │ 323.96  │ 323.97  │
+│ MSFT    │ MSFT [Technology Services]   │ $415.20       │  -0.45%  │ $3.08T     │ 415.21  │ 415.20  │ 415.14  │
+│ AMZN    │ AMZN [Retail Trade]          │ $218.94       │  +1.87%  │ $2.31T     │ 218.93  │ 218.94  │ 218.35  │
+│ TSLA    │ TSLA [Consumer Durables]     │ $345.12       │  -2.15%  │ $1.10T     │ 345.11  │ 345.12  │ 345.80  │
+│ META    │ META [Technology Services]   │ $542.30       │  +0.89%  │ $1.37T     │ 542.31  │ 542.30  │ 542.35  │
+└─────────┴──────────────────────────────┴───────────────┴──────────┴────────────┴─────────┴─────────┴─────────┘
 
 Precio en verde si subio respecto al snapshot anterior, rojo si bajo, negro si sin cambio.
 ```

@@ -1,0 +1,37 @@
+{
+  "E_premarket": {
+    "NASDAQ:NVDA": {
+      "close": 227.38,
+      "close|5": 227.25,
+      "close|15": 227.25,
+      "premarket_close": 226.2423,
+      "premarket_change": -0.500351833934381,
+      "premarket_volume": 1044477,
+      "gap": 0.2991856750798543,
+      "update_mode": "delayed_streaming_900",
+      "change": 2.2990057137715323
+    },
+    "AMEX:SPY": {
+      "close": 773.5,
+      "close|5": 773.52,
+      "close|15": 773.52,
+      "premarket_close": 773.96,
+      "premarket_change": 0.05946994182288771,
+      "premarket_volume": 458675,
+      "gap": 0.5988000367603514,
+      "update_mode": "delayed_streaming_900",
+      "change": 1.5504995470598202
+    },
+    "NASDAQ:QQQ": {
+      "close": 741.47,
+      "close|5": 741.39,
+      "close|15": 741.39,
+      "premarket_close": 740.75,
+      "premarket_change": -0.0971044007174973,
+      "premarket_volume": 782666,
+      "gap": 0.8926467530667324,
+      "update_mode": "delayed_streaming_900",
+      "change": 2.7749670801857347
+    }
+  }
+}

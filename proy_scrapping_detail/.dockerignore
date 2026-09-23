@@ -1,0 +1,14 @@
+DATOS_LIVE
+venv
+.git
+__pycache__
+*.pyc
+*.db
+.env
+informes
+logs_ejecucion
+data
+ultima_alerta_tradingview.json
+dashboard/tests
+dashboard/Dockerfile
+dashboard/docker-compose.yml
