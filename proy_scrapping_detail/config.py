@@ -2,9 +2,10 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Cargar .env desde el directorio del proyecto
+# Cargar .env desde el directorio del proyecto (F3.5: override=False — el
+# .env manda; ninguna variable de entorno externa debe pisar la receta).
 ENV_PATH = Path(__file__).parent / ".env"
-load_dotenv(ENV_PATH, override=True)
+load_dotenv(ENV_PATH, override=False)
 
 VERSION = "3.1.0"
 
@@ -20,7 +21,12 @@ DB_WRITE_ENABLED = os.getenv("DB_WRITE_ENABLED", "false").lower() == "true"
 
 # Nombre del script para auditoría
 SCRIPT_NAME_CALENDARIO = "calendario"
-SCRIPT_NAME_SCRAPER = "radar_v4"
+SCRIPT_NAME_SCRAPER = "radar_v5"
+
+# Anti-429 / resiliencia (F3.1): pausa entre POST y reintentos con backoff
+REQUEST_DELAY_S = 1.2
+MAX_RETRIES = 3
+RETRY_BACKOFF_BASE_S = 5
 
 # Validación estricta solo si DB_WRITE_ENABLED=true
 if DB_WRITE_ENABLED:
@@ -44,8 +50,26 @@ CONFIG_ACTIVOS = {
         "MSTR": {"primario": "NASDAQ:MSTR",     "respaldo": "NASDAQ:MSTR"},
         "MARA": {"primario": "NASDAQ:MARA",     "respaldo": "NASDAQ:MARA"},
     },
+    # F3.12: futuro S&P (pre-apertura) + SPDR sectoriales + IWM/RSP
+    "FUTUROS_PREAPERTURA": {
+        "ES1": {"primario": "CME_MINI:ES1!", "respaldo": "CME_MINI:ES1!"},
+    },
+    "ETF_SECTORIALES_SPDR": {
+        "XLK":  {"primario": "AMEX:XLK",  "respaldo": "AMEX:XLK"},
+        "XLF":  {"primario": "AMEX:XLF",  "respaldo": "AMEX:XLF"},
+        "XLV":  {"primario": "AMEX:XLV",  "respaldo": "AMEX:XLV"},
+        "XLY":  {"primario": "AMEX:XLY",  "respaldo": "AMEX:XLY"},
+        "XLP":  {"primario": "AMEX:XLP",  "respaldo": "AMEX:XLP"},
+        "XLI":  {"primario": "AMEX:XLI",  "respaldo": "AMEX:XLI"},
+        "XLU":  {"primario": "AMEX:XLU",  "respaldo": "AMEX:XLU"},
+        "XLRE": {"primario": "AMEX:XLRE", "respaldo": "AMEX:XLRE"},
+        "XLB":  {"primario": "AMEX:XLB",  "respaldo": "AMEX:XLB"},
+        "XLC":  {"primario": "AMEX:XLC",  "respaldo": "AMEX:XLC"},
+        "IWM":  {"primario": "AMEX:IWM",  "respaldo": "AMEX:IWM"},
+        "RSP":  {"primario": "AMEX:RSP",  "respaldo": "AMEX:RSP"},
+    },
     "FOREX_CENTINELA": {
-        "EURUSD": {"primario": "FX_IDC:EURUSD", "respaldo": "OANDA:EURUSD"},
+        "EURUSD": {"primario": "OANDA:EURUSD", "respaldo": "FX:EURUSD"},
         "AUDUSD": {"primario": "OANDA:AUDUSD",  "respaldo": "CME:6A1!"},
         "USDJPY": {"primario": "OANDA:USDJPY",  "respaldo": "CME:6J1!"},
         "GBPUSD": {"primario": "OANDA:GBPUSD",  "respaldo": "OANDA:GBPUSD"},

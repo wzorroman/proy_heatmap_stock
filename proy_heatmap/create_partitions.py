@@ -100,8 +100,10 @@ def partition_exists(conn, table_name, partition_name, start_date, end_date) -> 
         m = re.search(r"FROM \('([^']+)'\) TO \('([^']+)'\)", actual)
         if m:
             try:
-                b_from = datetime.fromisoformat(m.group(1))
-                b_to = datetime.fromisoformat(m.group(2))
+                # Solo la parte de fecha (YYYY-MM-DD): ignora el offset ("-05"/"-05:00")
+                # y evita el ValueError de fromisoformat en Python < 3.11.
+                b_from = datetime.fromisoformat(m.group(1)[:10]).date()
+                b_to = datetime.fromisoformat(m.group(2)[:10]).date()
             except ValueError:
                 b_from = b_to = None
             expected_year, expected_month = start_date.year, start_date.month

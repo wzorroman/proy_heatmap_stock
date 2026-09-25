@@ -57,19 +57,24 @@ tail -f /home/wilson/CODE_MAIN/OPENCODE_WZ/proy_heatmap_stock/logs/cron_heatmap.
 
 **Conexion:** PostgreSQL `heatmap_stock` en `localhost:5432`
 
-### Inicializacion (v1.0.2 — arranque desde BD en blanco)
+### Inicializacion (Alembic — esquema gestionado por proy_bd_heatmap)
+
+El esquema de `heatmap_stock` lo gestiona **Alembic** en `proy_bd_heatmap`
+(0001 baseline → 0002 seed catálogos → 0003 F4.2 → 0004 F4.3 → 0005 F4.4 →
+0006 F4.5/F4.5b). El antiguo `scripts/02_init_database.sql` quedó obsoleto.
 
 ```bash
-# 1. Crear el esquema completo (DDL del corte 2026-09-11 + share_class + BRIN)
-psql -d heatmap_stock -f scripts/02_init_database.sql
+# 1. Aplicar migraciones (crea/evoluciona el esquema y los catálogos)
+cd proy_bd_heatmap && ./venv/bin/alembic upgrade head
 
 # 2. Sembrar catálogo por defecto (dim_asset + dim_time), antes del primer scraper
+cd ../proy_heatmap
 python seed_dim_asset.py            # carga real
 python seed_dim_asset.py --dry-run  # solo conteos
-
-# 3. Crear particiones futuras (mantiene BRIN en fact_market_series)
-python create_partitions.py --all --months 3
 ```
+
+Las particiones futuras de los hechos las crean los propios scrapers /
+`proy_scrapping_detail/db/partitions.py` (patrón heredado de `02_init_database.sql`).
 
 ### Tablas principales
 

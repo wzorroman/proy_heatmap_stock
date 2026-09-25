@@ -1,4 +1,5 @@
 # file: proy_scrapping_detail/db/audit_repository.py
+import json
 import logging
 from typing import Dict, Any
 from db.postgresql_connection import PostgreSQLConnector
@@ -16,8 +17,8 @@ def log_sync_run(db: PostgreSQLConnector, data: Dict[str, Any]) -> int:
         INSERT INTO audit_sync_run (
             script_name, run_start, run_end,
             records_fetched, records_upserted, records_failed,
-            status, error_message, execution_mode
-        ) VALUES (%s, %s, CURRENT_TIMESTAMP, %s, %s, %s, %s, %s, %s)
+            status, error_message, execution_mode, source_params
+        ) VALUES (%s, %s, CURRENT_TIMESTAMP, %s, %s, %s, %s, %s, %s, %s::jsonb)
     """
     params = (
         data.get('script_name'),
@@ -27,7 +28,8 @@ def log_sync_run(db: PostgreSQLConnector, data: Dict[str, Any]) -> int:
         data.get('records_failed', 0),
         data.get('status', 'UNKNOWN'),
         data.get('error_message'),
-        data.get('execution_mode', 'cron')
+        data.get('execution_mode', 'cron'),
+        json.dumps(data.get('source_params'), ensure_ascii=False) if data.get('source_params') else None,
     )
     result = db.execute_query(query, params)
     logger.info(f"Auditoría registrada: {data.get('script_name')} - {data.get('status')}")

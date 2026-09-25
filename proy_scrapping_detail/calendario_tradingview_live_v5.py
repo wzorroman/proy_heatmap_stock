@@ -57,12 +57,13 @@ import sys
 import json
 import time
 import argparse
+import logging
+from logging.handlers import RotatingFileHandler
 import requests
 import pandas as pd
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import List, Dict, Tuple
-import logging
 import config  # NUEVO: config para BD
 
 # ==============================================================================
@@ -98,20 +99,35 @@ CAMPOS_API = [
 ]
 
 # ==============================================================================
-# 2. LOGGING
+# 2. LOGGING (F3.6: RotatingFileHandler 10MB x 7, buste en vez de 1 log por ejecución)
 # ==============================================================================
 
 def setup_logging():
-    log_filename = LOG_DIR / f"calendario_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+    # RotatingFileHandler (F3.6, E-CAL-04): no acumula más de 7 archivos.
+    log_file = LOG_DIR / "calendario.log"
+    rotating = RotatingFileHandler(
+        log_file, maxBytes=10 * 1024 * 1024, backupCount=7, encoding='utf-8'
+    )
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(levelname)s - %(message)s',
         handlers=[
-            logging.FileHandler(log_filename, encoding='utf-8'),
+            rotating,
             logging.StreamHandler(sys.stdout)
         ]
     )
-    return logging.getLogger(__name__)
+    # Adjuntar explícitamente al logger del módulo: basicConfig es no-op si el
+    # root ya tiene handlers (p.ej. bajo pytest), así el handler queda garantizado.
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.INFO)
+    if not any(isinstance(h, RotatingFileHandler) for h in logger.handlers):
+        if len(logger.handlers) == 0:
+            logger.handlers = [rotating, logging.StreamHandler(sys.stdout)]
+        else:
+            formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+            rotating.setFormatter(formatter)
+            logger.addHandler(rotating)
+    return logger
 
 logger = setup_logging()
 
@@ -119,7 +135,28 @@ logger = setup_logging()
 # 3. EXTRACCION - RAW, SIN TRANSFORMACION
 # ==============================================================================
 
+# F3.6 · Reintento con backoff exponencial (E-CAL-01, E-CAL-03)
+MAX_REINTENTOS_API = 3
+BACKOFF_BASE_S = 5
+
+
+class ApiSinEventos(Exception):
+    """Distinto de error de API: no hay eventos en el rango (checkpoint intacto)."""
+    pass
+
+
+class ErrorApi(Exception):
+    """Error real de red/HTTP/429: se debe reintentar."""
+    pass
+
+
 def fetch_calendar_events(desde: datetime, hasta: datetime, paises: str) -> List[Dict]:
+    """Consulta la API con reintento con backoff (F3.6).
+
+    - Sin eventos en rango -> retorna [] (estado PARTIAL_FAIL, checkpoint intacto
+      lo maneja el caller, NO se reinicia a cero).
+    - Error de API/429 -> reintenta hasta MAX_REINTENTOS_API con backoff.
+    """
     desde_str = desde.strftime('%Y-%m-%dT%H:%M:%S.000Z')
     hasta_str = hasta.strftime('%Y-%m-%dT%H:%M:%S.000Z')
 
@@ -129,36 +166,49 @@ def fetch_calendar_events(desde: datetime, hasta: datetime, paises: str) -> List
         "countries": paises
     }
 
-    try:
-        logger.debug(f"Consultando API: {desde_str[:10]} a {hasta_str[:10]}")
-        response = requests.get(CALENDAR_API, params=params, headers=HEADERS, timeout=15)
+    intento = 0
+    while intento < MAX_REINTENTOS_API:
+        intento += 1
+        try:
+            logger.debug(f"Consultando API: {desde_str[:10]} a {hasta_str[:10]} (intento {intento})")
+            response = requests.get(CALENDAR_API, params=params, headers=HEADERS, timeout=15)
 
-        if response.status_code == 200:
-            data = response.json()
-            if data.get('status') == 'ok':
-                eventos = data.get('result', [])
-                logger.info(f"Eventos obtenidos de API: {len(eventos)}")
-                return eventos
+            if response.status_code == 200:
+                data = response.json()
+                if data.get('status') == 'ok':
+                    eventos = data.get('result', [])
+                    logger.info(f"Eventos obtenidos de API: {len(eventos)}")
+                    return eventos
+                else:
+                    logger.warning(f"Estado API: {data.get('status')}")
+                    # API respondió pero sin status 'ok' -> no hay eventos nuevos
+                    raise ApiSinEventos(f"status={data.get('status')}")
+            elif response.status_code == 429:
+                logger.error(f"RATE LIMIT (429) intento {intento}/{MAX_REINTENTOS_API}.")
+                if intento < MAX_REINTENTOS_API:
+                    espera = BACKOFF_BASE_S * (2 ** (intento - 1))
+                    logger.warning(f"Backoff {espera}s antes de reintentar...")
+                    time.sleep(espera)
+                continue
             else:
-                logger.warning(f"Estado API: {data.get('status')}")
-                return []
-        elif response.status_code == 429:
-            logger.error("RATE LIMIT (429). Esperando 30 segundos...")
-            time.sleep(30)
-            return []
-        else:
-            logger.error(f"Error HTTP {response.status_code}")
-            return []
+                logger.error(f"Error HTTP {response.status_code} (intento {intento}).")
+                if intento < MAX_REINTENTOS_API:
+                    espera = BACKOFF_BASE_S * (2 ** (intento - 1))
+                    logger.warning(f"Backoff {espera}s antes de reintentar...")
+                    time.sleep(espera)
+                continue
 
-    except requests.exceptions.Timeout:
-        logger.error("Timeout en la solicitud")
-        return []
-    except requests.exceptions.ConnectionError:
-        logger.error("Error de conexion")
-        return []
-    except Exception as e:
-        logger.error(f"Error inesperado: {e}")
-        return []
+        except ApiSinEventos:
+            return []  # no hay eventos (PARTIAL_FAIL; checkpoint intacto via caller)
+        except requests.exceptions.Timeout:
+            logger.error(f"Timeout en la solicitud (intento {intento}).")
+        except requests.exceptions.ConnectionError:
+            logger.error(f"Error de conexion (intento {intento}).")
+        except Exception as e:
+            logger.error(f"Error inesperado: {e} (intento {intento}).")
+
+    # Se agotaron los reintentos por error de API (no por falta de eventos)
+    raise ErrorApi(f"API calendario agotó {MAX_REINTENTOS_API} reintentos")
 
 
 def evento_a_dict(evento_raw: Dict) -> Dict:
@@ -394,6 +444,9 @@ def capturar_eventos(paises: str = PAISES_POR_DEFECTO,
                      dias_mantener: int = DIAS_MANTENER_DEFAULT) -> Tuple[int, int]:
     """
     Captura eventos y guarda TODOS sin filtrar nada.
+
+    F3.6 (E-CAL-05): distingue "API sin eventos" (checkpoint intacto) de
+    "error de API" (reintentado y auditado como FAILED, sin tocar checkpoint).
     """
     ahora = datetime.now(timezone.utc)
     desde = ahora - timedelta(days=incluir_pasado)
@@ -402,11 +455,19 @@ def capturar_eventos(paises: str = PAISES_POR_DEFECTO,
     logger.info(f"Rango: {desde.strftime('%Y-%m-%d %H:%M')} a {hasta.strftime('%Y-%m-%d %H:%M')}")
     logger.info(f"Paises: {paises}")
 
-    eventos_raw = fetch_calendar_events(desde, hasta, paises)
+    try:
+        eventos_raw = fetch_calendar_events(desde, hasta, paises)
+    except ErrorApi as e:
+        # Error de API tras reintentos: NO tocar checkpoint (E-CAL-05)
+        logger.error(f"API no disponible tras reintentos: {e}")
+        _auditar_calendario_falla(ahora, str(e))
+        return 0, 0
 
     if not eventos_raw:
-        logger.warning("No se obtuvieron eventos")
-        guardar_checkpoint(0, 0, 0)
+        # API respondió sin eventos: PARTIAL_FAIL, checkpoint intacto (F3.6)
+        logger.warning("No se obtuvieron eventos (API ok, sin eventos en rango). "
+                       "Checkpoint NO se reinicia.")
+        _auditar_calendario_parcial(ahora)
         return 0, 0
 
     # Convertir a diccionarios planos - SIN FILTRO, SIN TRANSFORMACION
@@ -427,7 +488,7 @@ def capturar_eventos(paises: str = PAISES_POR_DEFECTO,
             logger.error(f"BD: Error insertando eventos: {e}")
             # El CSV ya se guardó — no propagar error al caller
 
-    # Checkpoint local (sin cambios)
+    # Checkpoint local (sin cambios) — except explícito (F3.6, E-CAL-06/07)
     try:
         fechas = []
         for e in eventos_raw:
@@ -440,11 +501,69 @@ def capturar_eventos(paises: str = PAISES_POR_DEFECTO,
             max_ts = int(dt.timestamp())
         else:
             max_ts = 0
-    except:
+    except (TypeError, ValueError) as exc:
+        logger.warning(f"No se pudo calcular timestamp del checkpoint: {exc}")
         max_ts = 0
 
     guardar_checkpoint(max_ts, len(eventos_para_guardar), len(eventos_raw))
     return len(eventos_para_guardar), len(eventos_raw)
+
+
+def _auditar_calendario_falla(run_start: datetime, error: str):
+    """Audita un fallo de API del calendario en BD (si está activa)."""
+    if not config.DB_WRITE_ENABLED:
+        return
+    try:
+        from application.event_service import process_calendar_batch  # noqa: F401
+        from db.audit_repository import log_sync_run
+        from db.postgresql_connection import PostgreSQLConnector
+        db = PostgreSQLConnector(
+            config.PG_HOST, config.PG_PORT,
+            config.PG_DATABASE, config.PG_USER, config.PG_PASSWORD
+        )
+        if db.connect():
+            log_sync_run(db, {
+                'script_name': config.SCRIPT_NAME_CALENDARIO,
+                'run_start': run_start,
+                'records_fetched': 0,
+                'records_upserted': 0,
+                'records_failed': 0,
+                'status': 'FAILED',
+                'error_message': f'API calendar: {error}',
+                'execution_mode': 'manual',
+                'source_params': {'condicion': 'error API tras reintentos', 'checkpoint': 'intacto'},
+            })
+            db.disconnect()
+    except Exception as e:
+        logger.error(f"BD: no se pudo auditar fallo del calendario: {e}")
+
+
+def _auditar_calendario_parcial(run_start: datetime):
+    """Audita PARTIAL_FAIL (API ok sin eventos; checkpoint intacto)."""
+    if not config.DB_WRITE_ENABLED:
+        return
+    try:
+        from db.audit_repository import log_sync_run
+        from db.postgresql_connection import PostgreSQLConnector
+        db = PostgreSQLConnector(
+            config.PG_HOST, config.PG_PORT,
+            config.PG_DATABASE, config.PG_USER, config.PG_PASSWORD
+        )
+        if db.connect():
+            log_sync_run(db, {
+                'script_name': config.SCRIPT_NAME_CALENDARIO,
+                'run_start': run_start,
+                'records_fetched': 0,
+                'records_upserted': 0,
+                'records_failed': 0,
+                'status': 'PARTIAL_FAIL',
+                'error_message': 'API ok pero sin eventos en rango',
+                'execution_mode': 'manual',
+                'source_params': {'condicion': 'sin eventos', 'checkpoint': 'intacto'},
+            })
+            db.disconnect()
+    except Exception as e:
+        logger.error(f"BD: no se pudo auditar PARTIAL_FAIL del calendario: {e}")
 
 
 # ==============================================================================
@@ -499,6 +618,16 @@ def main():
         logger.info("Forzando rotacion manual...")
         rotar_eventos_recientes(force_rotate=True, dias_mantener=args.dias_mantener)
         return
+
+    # Gate NYSE con pre_min=90 (F2.2): arranque a las 08:00 ET.
+    try:
+        import pandas as pd
+        from db.sessions import en_ventana_nyse
+        if not en_ventana_nyse(pre_min=90):
+            logger.info("Fuera de la ventana NYSE (pre_min=90): se omite la captura")
+            return
+    except Exception as e:
+        logger.warning(f"Gate NYSE no disponible ({e}); se captura igualmente")
 
     nuevos, totales = capturar_eventos(
         paises=args.paises,

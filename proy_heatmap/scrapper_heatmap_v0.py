@@ -79,10 +79,8 @@ def get_or_create_asset(conn: PostgreSQLConnector, symbol: str, parsed: Dict) ->
     upsert_query = """
         INSERT INTO dim_asset (
             symbol, ticker, exchange, asset_class, share_class,
-            sector, sector_es, company_name, logo_id, source_discovered_by,
-            valid_from, valid_to, current_version
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                  CURRENT_TIMESTAMP, 'infinity', TRUE)
+            sector, sector_es, company_name, logo_id, source_discovered_by
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         ON CONFLICT (symbol) DO UPDATE SET
             ticker = COALESCE(dim_asset.ticker, EXCLUDED.ticker),
             exchange = COALESCE(dim_asset.exchange, EXCLUDED.exchange),

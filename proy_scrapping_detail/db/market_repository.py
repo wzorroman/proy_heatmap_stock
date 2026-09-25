@@ -10,9 +10,12 @@ logger = logging.getLogger('db.market_repository')
 
 # Columnas que se escriben en fact_market_series (raw_payload se omite a NULL,
 # D18: costo ~366 MB/mes; el crudo vive en el CSV). ingested_at usa su DEFAULT.
+# F3.3: update_mode, cycle_id, fetched_at, feed_delay_s y premarket_*/gap.
 _COLUMNAS = (
     "asset_id, timestamp_utc, close, volume, rsi, cci20, "
-    "bbpower, adx, pivot_camarilla_r3, perf_w, change_pct, source_checksum"
+    "bbpower, adx, pivot_camarilla_r3, perf_w, change_pct, source_checksum, "
+    "update_mode, cycle_id, fetched_at, feed_delay_s, "
+    "premarket_close, premarket_change, premarket_volume, gap"
 )
 
 
@@ -22,6 +25,16 @@ def safe_float(val: Any) -> Optional[float]:
         return None
     try:
         return float(val)
+    except (ValueError, TypeError):
+        return None
+
+
+def safe_int(val: Any) -> Optional[int]:
+    """Convierte a int si es posible (para feed_delay_s), None si no."""
+    if val is None or val == '':
+        return None
+    try:
+        return int(val)
     except (ValueError, TypeError):
         return None
 
@@ -58,12 +71,12 @@ def canonical_checksum(row: Dict) -> str:
 def get_asset_id_cache(db: PostgreSQLConnector) -> Dict[str, int]:
     """
     Cache símbolo -> asset_id desde dim_asset (una query por ciclo).
-    Solo incluye activos activos y versión vigente.
+    Solo incluye activos activos.
     """
     query = """
         SELECT symbol, asset_id
         FROM dim_asset
-        WHERE is_active AND current_version
+        WHERE is_active
     """
     result = db.execute_query(query)
     cache = {}
@@ -116,6 +129,14 @@ def insert_market_series_batch(db: PostgreSQLConnector, rows: List[Dict],
             safe_float(row.get('perf_w')),
             safe_float(row.get('change_pct')),
             canonical_checksum(row),
+            row.get('update_mode'),
+            str(row['cycle_id']) if row.get('cycle_id') else None,
+            row.get('fetched_at'),
+            safe_int(row.get('feed_delay_s')),
+            safe_float(row.get('premarket_close')),
+            safe_float(row.get('premarket_change')),
+            safe_float(row.get('premarket_volume')),
+            safe_float(row.get('gap')),
         ))
 
     if simbolos_ausentes:
@@ -143,9 +164,17 @@ def insert_market_series_batch(db: PostgreSQLConnector, rows: List[Dict],
             perf_w = EXCLUDED.perf_w,
             change_pct = EXCLUDED.change_pct,
             source_checksum = EXCLUDED.source_checksum,
+            update_mode = EXCLUDED.update_mode,
+            cycle_id = EXCLUDED.cycle_id,
+            fetched_at = EXCLUDED.fetched_at,
+            feed_delay_s = EXCLUDED.feed_delay_s,
+            premarket_close = EXCLUDED.premarket_close,
+            premarket_change = EXCLUDED.premarket_change,
+            premarket_volume = EXCLUDED.premarket_volume,
+            gap = EXCLUDED.gap,
             ingested_at = CURRENT_TIMESTAMP
     """
-    template = "(" + ", ".join(["%s"] * 12) + ")"
+    template = "(" + ", ".join(["%s"] * 20) + ")"
     db.execute_values(upsert_query, params, template=template)
     logger.info(f"BD: {len(params)} registros upserted en fact_market_series")
     return len(params)

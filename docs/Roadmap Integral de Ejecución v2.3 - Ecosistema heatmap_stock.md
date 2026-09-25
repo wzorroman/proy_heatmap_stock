@@ -4,13 +4,23 @@
 
 **Objetivo:** herramienta de apoyo a decisiones de trading en 15 min, operativa 09:00–16:00 ET, con captura fiable, pre-market y contexto verificable.
 
-**Estado:** 16 hipótesis cerradas · 9 dudas cerradas · 37 errores confirmados con código · 4 errores S1 activos · 1 decisión confirmada (D1) · 1 decisión nueva pendiente (D14).
+**Estado:** 16 hipótesis cerradas · 9 dudas cerradas · 37 errores confirmados con código · 3 errores S1 activos · 1 decisión confirmada (D1) · 1 decisión nueva pendiente (D14).
 
 **Esta versión incorpora por primera vez la evidencia completa del batch `POST /america/scan?label-product=heatmap-stock`** (Q16 reabierta y cerrada **A FAVOR**), el catálogo de timeframes válidos para filtros, los 58 campos filtrables y el patrón anti-429 validado el 2026-09-22.
 
 ---
 
 ## **Estado de la evidencia**
+
+> **Actualización (2026-09-22):** **FASE 3 implementada y verificada** (changelog v2.3.4). Validación en vivo de endpoints: `POST /america/scan?label-product=heatmap-stock` con `CAMPOS_LIST`=33 (33/33 campos, `update_mode=delayed_streaming_900`), `GET /symbol` por clase de activo (futuros sin clave `symbol`, inválidos→`None`), scan heatmap (10.721 filas, filtro `exchange in_range`). **21 tests pytest PASS** (radar, calendario, heatmap) + `scripts/verificar_endpoints.py` en ambos proyectos. F2.3 sigue pospuesta; F2.4/F2.5 pendientes; F3.9 sin cron por directiva del usuario.
+
+> **Actualización (2026-09-23, verificación en vivo de los 3 scripts):** ejecutados los scripts mejorados y comprobados contra la BD (changelog v2.3.5). **Radar:** capturó 15/15 símbolos FX+cripto con escritura completa en `fact_market_series` (14/15 antes de dos fixes); se detectaron y corrigieron **E-RAD-16** (`can't adapt type 'UUID'` en `cycle_id`) y **E-RAD-17** (gate forex caía al default NYSE por clave `"forex"` vs `"fx"`); alta de `FX:EURUSD` en `dim_asset` (respaldo que antes solo se escribía a CSV). **Calendario:** 59 eventos US upserted, audit SUCCESS 59/59, checkpoint `last_event_id=421371` ACTIVE. **Heatmap:** `SKIPPED` fuera de la ventana NYSE (0 escrituras), audit correcto. Pendiente: e2e completo con equity/ETF en sesión abierta (mercado cerrado durante la prueba).
+
+> **Actualización (2026-09-23, FASE 4 · F4.1/F4.1b/F4.2, changelog v2.3.6):** **F4.1 ✅** barras de 15 min materializadas en `fact_market_bar_15m` (18.741, 124 activos, idempotente). **F4.1b ✅** regla de cierre `definitive`/`provisional`/`unknown` (M-CAP-03). **F4.2 ✅** tabla larga `fact_market_indicator_tf` vía **migración Alembic `0003`** de `proy_bd_heatmap` aplicada a `heatmap_stock`; el radar la puebla en cada ciclo y la **aceptación en vivo `RSI|15` = scan fue 95/95** (E-RAD-01 cerrado, D12 cumplida). **Pruebas ✅** 45 tests `proy_scrapping_detail` + 8 `proy_heatmap` + 9 `proy_bd_heatmap`.
+
+> **Actualización (2026-09-23, F4.3 · F4.4, changelog v2.3.7):** **F4.3 ✅** `latest_market_tick` vía **migración `0004`** (una fila por activo, PK asset_id): el radar la reescribe por upsert en cada ciclo y `--prime` pobló 95 filas (E-DSH-04; `get_latest_ticks()` = lectura de ~110 filas). **F4.4 ✅** **migración `0005`** añade a `fact_heatmap_snapshot` las columnas explícitas de M-DAT-05 (volume, avg_vol_10d/30d, volatility_d, change_abs, high/low 52w, update_mode, fetched_at); el scraper las completa en cada capture y `fetched_at`= instante del fetch (E-HM-08/E-HM-10). **Pruebas ✅** 51 `proy_scrapping_detail` + 10 `proy_heatmap` + 11 `proy_bd_heatmap`; BD en revisión `0005 (head)`.
+
+> **Actualización (2026-09-23, F4.5 · F4.5b, changelog v2.3.8):** **F4.5 ✅** resolver SCD2 en `dim_asset`; **F4.5b ✅** `dim_asset` + `logical_key` + resolución SCD2. **Migración Alembic `0006`** aplicada a `heatmap_stock`: `dim_asset` pasa a **Tipo 1** (se dropean `valid_from`, `valid_to`, `current_version`; `symbol` era UNIQUE global, el SCD2 era una falsa promesa — E-DSH-02/E-DSH-03) y se añaden **`logical_key`, `is_canonical`, `role` (`primary`/`fallback`) y `feed_delay_s`** (backfill por clase: 900 equity/ETF, 600 futuros, 0 resto). **Mapeo canónico F2.5** de las 6 claves (VIX|DXY|TLT|US10Y|ORO|OIL) con alta canónica de **`TVC:DXY`**; índice único parcial `uq_dim_asset_canonical_logical_key` (**1 canónico por clave**); funciones (`upsert_*`), vistas (`vw_heatmap_enriched`, `vw_market_live`) e índices `idx_dim_asset_active/class` reconstruidos **sin `current_version`**; `idx_dim_asset_symbol` (duplicado de UNIQUE) eliminado. **Consumidores corregidos** (seed_symbols con `MAPEO_LOGICAL`/`FEED_DELAY_CLASE`, repos, scrappers v0/v1, heatmap_repository, seed_dim_asset, iconos). **Pruebas ✅** 14 `proy_bd_heatmap` (3 nuevos F4.5/F4.5b) + 51 `proy_scrapping_detail` + 10 `proy_heatmap`; **BD en revisión `0006 (head)`**, `dim_asset`=1.669, secuencia 4.701, 0 `feed_delay_s` NULL.
 
 Este roadmap consolida evidencia de **cinco** fuentes con fechas distintas:
 
@@ -81,6 +91,8 @@ Todo error confirmado en este roadmap cita su fuente en el campo **Origen**.
 | --- | --- | --- | --- | --- |
 | **E-RAD-14** | S1 | `FX_IDC:EURUSD` devuelve `volume = 0` (RVOL/VWAP/medias de EURUSD nulos en producción) | Test F (2026-09-22 04:40 UTC) | F1.7 |
 | **E-RAD-15** | S2 | Ventana ciega de ±15 s en cada frontera de barra → valor ambiguo entre vela vieja/nueva | Test C (2026-09-22, dos corridas: 10:16 y 13:24 ET) | F4.1b + F4.1c |
+| **E-RAD-16** | S1 | `execute_values` no adapta `cycle_id` como `uuid.UUID` → `can't adapt type 'UUID'` → ciclo capturado pero 0 escrituras BD | Verificación fase 3 en vivo (2026-09-23 04:32 UTC) | ✅ F3.3 (fix `str(cycle_id)` en `market_repository.py:133`) |
+| **E-RAD-17** | S1 | `asset_class_de()` devuelve `"forex"` pero `GATE_POR_CLASE` usa clave `"fx"` → todo el forex nocturno (24/5) caía al default NYSE y se omitía | Verificación fase 3 en vivo (2026-09-23 04:33 UTC, miércoles 00:32 ET) | ✅ F3.4 (fix devuelve `"fx"` en `db/sessions.py:79`) |
 
 ### **0.4 Decisiones de arquitectura**
 
@@ -92,9 +104,40 @@ Todo error confirmado en este roadmap cita su fuente en el campo **Origen**.
 | --- | --- | --- |
 | **D14** | Primario de EURUSD | **`OANDA:EURUSD`** (volume=14.911, broker real) sobre `FX:EURUSD` (22.504) y `FX_IDC:EURUSD` (0) |
 
-### **0.5 Trazabilidad de la cobertura**
+### **0.5 · Trazabilidad de la cobertura**
 
-**El roadmap cubre 55/55 mejoras del informe v3 + E-RAD-14/15 + M-CAP-18.** Estado por fase: F1 (8 quick-wins), F2 (5 subsecciones), F3 (12 subsecciones), F4 (9 subsecciones), F5 (6 subsecciones), F6 (9 subsecciones), F7 (10 subsecciones).
+**El roadmap cubre 55/55 mejoras del informe v3 + E-RAD-14/15/16/17 + M-CAP-18.** Estado por fase: F1 (8 quick-wins), F2 (5 subsecciones), F3 (12 subsecciones), F4 (9 subsecciones), F5 (6 subsecciones), F6 (9 subsecciones), F7 (10 subsecciones).
+
+### **0.6 · Política de cambios de esquema (Alembic) — NUEVO**
+
+> **A partir del 2026-09-23, todo cambio de esquema en la BD `heatmap_stock`
+> debe realizarse mediante una migración de `proy_bd_heatmap` (Alembic).**
+> No se aplica DDL directo sobre la BD viva ni se editan los scripts SQL
+> legacy (`proy_heatmap/scripts/*.sql`, `proy_scrapping_detail/db/*.sql`), que
+> quedan congelados como referencia histórica.
+
+**Reglas:**
+
+1. **Cualquier modificación** (crear tabla/columna/índice/partición, cambiar
+   tipos, crear función/vista/extensión, seed de catálogos) se hace con una
+   **nueva revisión** en `proy_bd_heatmap/alembic/versions/`.
+2. Flujo por defecto:
+   ```bash
+   cd proy_bd_heatmap
+   ./venv/bin/alembic revision -m "descripcion"     # manual (recomendado)
+   # o --autogenerate (revisar siempre: no captura funciones/vistas/extensión/CHECK)
+   ./venv/bin/alembic upgrade head                  # probar en heatmap_stock_test
+   # verificar: ./venv/bin/python3 -m pytest tests -q
+   ./venv/bin/alembic upgrade head                  # aplicar en heatmap_stock
+   ```
+3. La BD actual está en la revisión **`0006 (head)`**
+   (`0001` baseline de esquema + `0002` seed de catálogos + `0003`
+   `fact_market_indicator_tf` + `0004` `latest_market_tick` + `0005`
+   columnas explícitas de snapshot + `0006` `dim_asset` Tipo 1 + mapeo
+   canónico). Ver
+   `docs/Roadmap proy_bd_heatmap - Alembic (2026-09-23).md` y
+   `proy_bd_heatmap/README.md`.
+4. Pendientes que pasan a revisiones Alembic: **F2.3** (particiones UTC).
 
 ---
 
@@ -121,7 +164,7 @@ Todo error confirmado en este roadmap cita su fuente en el campo **Origen**.
 
 ## **FASE 0 · Verificación empírica**
 
-**Estado:** protocolo T1–T11 completado al 90% + **T12 corrido (Tests J/K/L/M v3)** el 2026-09-22 22:42 UTC.
+**Estado:** protocolo T1–T11 completado al 90% + **T12 corrido (Tests J/K/L/M v3)** el 2026-09-22 22:42 UTC + **F0.1 (A1–A16) ✅** y **F0.3 (ADR 0001) ✅** el 2026-09-22.
 
 **Pendiente:** T3.1 (semántica de `gap`), T13, A1–A16 (SQL).
 
@@ -179,6 +222,8 @@ Todo error confirmado en este roadmap cita su fuente en el campo **Origen**.
 
 **Duración:** 1–2 días
 
+**Estado:** ✅ **COMPLETADA el 2026-09-22** — F1.1–F1.8 aplicados y verificados (changelog v2.3.2).
+
 **Objetivo:** cerrar bugs que romperán con el cron denso + corregir EURUSD.
 
 **Criterio de salida:** Streamlit sin vacío, logs coherentes, EURUSD con volumen.
@@ -200,8 +245,8 @@ Todo error confirmado en este roadmap cita su fuente en el campo **Origen**.
 
 **Hecho cuando:**
 
-- Con el último snapshot de hace 8 h, `fetch_heatmap_data()` retorna > 0 filas.
-- Test unitario con dos snapshots sintéticos de días distintos no colisiona.
+- Con el último snapshot de hace 8 h, `fetch_heatmap_data()` retorna > 0 filas. **✅ Verificado 2026-09-22: 1000 filas.**
+- Test unitario con dos snapshots sintéticos de días distintos no colisiona. **✅ Verificado 2026-09-22: labels `09-18 14:23` y `09-18 12:48` (formato `%m-%d %H:%M`).**
 
 ### **F1.2 · Arreglar `event_service`**
 
@@ -226,8 +271,8 @@ max_event_id = max(ids) if ids else 0
 
 **Hecho cuando:**
 
-- Evento con `id=""` no rompe el ciclo.
-- `guardar_checkpoint` se llama una sola vez por ejecución.
+- Evento con `id=""` no rompe el ciclo. **✅ Verificado 2026-09-22: `safe_int` filtrado, `max([]) → 0`.**
+- `guardar_checkpoint` se llama una sola vez por ejecución. **✅ El retorno se eliminó de `event_service` (firma del contraste: `:63-64`).**
 
 ### **F1.3 · Invertir orden en `scrapper_heatmap_v1.main()`**
 
@@ -239,7 +284,7 @@ max_event_id = max(ids) if ids else 0
 
 **Cambio:** fetch → validar → DDL → procesar.
 
-**Hecho cuando:** fuera de sesión se registra `SKIPPED`, no `FAILED`.
+**Hecho cuando:** fuera de sesión se registra `SKIPPED`, no `FAILED`. **✅ Verificado 2026-09-22 (estado `'closed'` → `SKIPPED`, exit 0).**
 
 ### **F1.4 · Contrato con estado en `market_service`**
 
@@ -255,7 +300,7 @@ max_event_id = max(ids) if ids else 0
 - `flush_radar_batch` propaga ese dict.
 - `main()` solo limpia `batch_buffer` si `status == SUCCESS`.
 
-**Hecho cuando:** con BD apagada 5 min, el log muestra `FAILED` y el buffer conserva filas.
+**Hecho cuando:** con BD apagada 5 min, el log muestra `FAILED` y el buffer conserva filas. **✅ El contrato `{'inserted','status','error'}` quedó aplicado; `batch_buffer.clear()` solo con `SUCCESS` (2 call sites).**
 
 ### **F1.5 · Corregir `records_failed` en `log_sync_run`**
 
@@ -267,7 +312,7 @@ max_event_id = max(ids) if ids else 0
 
 **Cambio:** `records_failed = max((records_fetched or 0) - (records_upserted or 0), 0)`
 
-**Hecho cuando:** `fetched=1000, upserted=0` registra `records_failed=1000`.
+**Hecho cuando:** `fetched=1000, upserted=0` registra `records_failed=1000`. **✅ Verificado 2026-09-22 (1000→1000; 1000/950→50).**
 
 ### **F1.6 · Documentar `source_checksum`**
 
@@ -277,7 +322,7 @@ max_event_id = max(ids) if ids else 0
 
 **Cambio:** comentario en `prepare_bd_row` con la ubicación exacta del cálculo.
 
-**Hecho cuando:** un lector sabe dónde buscar.
+**Hecho cuando:** un lector sabe dónde buscar. **✅ Comentario añadido en `prepare_bd_row` → `canonical_checksum` en `market_repository.py:118`.**
 
 ### **F1.7 · Corregir primario de EURUSD**
 
@@ -307,7 +352,9 @@ max_event_id = max(ids) if ids else 0
 1. Opcional: en BD, marcar `FX_IDC:EURUSD` como `is_active = false`.
 2. Validar en el siguiente ciclo que `fact_market_series.volume > 0` para EURUSD.
 
-**Hecho cuando:** `SELECT volume FROM fact_market_series WHERE asset_id = <EURUSD> ORDER BY timestamp_utc DESC LIMIT 1` retorna > 0.
+**Hecho cuando:** retorna > 0 en el ciclo en vivo. **Evidencia previa (2026-09-22, BD):** `OANDA:EURUSD` ya registraba `volume=97767/97552` el 2026-09-18 vs `FX_IDC:EURUSD` en `0` — el cambio de primario queda verificado retroactivamente.
+
+**✅ Complemento (2026-09-23, changelog v2.3.5):** el respaldo `FX:EURUSD` quedó dado de alta en `dim_asset` (`asset_id=4683`, `asset_class=forex`, `source_discovered_by=radar_v5`). Verificado en vivo: `volume=20743>0`, `update_mode=streaming`, precio consistente con `OANDA:EURUSD` (±1 pip). Con esto el radar persiste **ambas** series del par en `fact_market_series` (antes el respaldo solo iba a CSV, pues `insert_market_series_batch` omite símbolos ausentes de `dim_asset`), dando redundancia real de fuentes para EURUSD.
 
 ### **F1.8 · Refactorizar `main()` del heatmap: `create_partition` una sola vez**
 
@@ -317,13 +364,15 @@ max_event_id = max(ids) if ids else 0
 
 **Duración:** 1 h
 
-**Cambio:** decidir dónde vive el DDL (¿en `main()` o en `process_heatmap_data`?) y dejar una sola ruta.
+**Cambio:** decidir dónde vive el DDL (¿en `main()` o en `process_heatmap_data`?) y dejar una sola ruta. **✅ Decisión: DDL único en `main()` tras validar la API; retirado de `process_heatmap_data` (E-HM-11).**
 
 ---
 
 ## **FASE 2 · Tiempo y ventana**
 
 **Duración:** 4–6 días
+
+**Estado:** F2.1 ✅ y F2.2 ✅ implementadas el 2026-09-22; **F2.3 preparada (SQL generado + backup, ejecución pospuesta)**; F2.4 y F2.5 pendientes.
 
 **Objetivo:** base temporal correcta antes del fin del DST (1-nov-2026).
 
@@ -339,7 +388,7 @@ max_event_id = max(ids) if ids else 0
 
 **Hipótesis verificable:** H3/H4/H5 (días de sesión/cierre temprano) se cerrarán con A1–A4.
 
-**Hecho cuando:** 2026-11-26 (Acción de Gracias) no es sesión; 2026-11-27 tiene `is_early_close=true`.
+**Hecho cuando:** 2026-11-26 (Acción de Gracias) no es sesión; 2026-11-27 tiene `is_early_close=true`. **✅ Verificado 2026-09-22: `dim_trading_session` creada y poblada (630 días, 432 sesiones, XNYS exchange_calendars 4.13.2); 26/11 `is_session=false`, 27/11 `early=true` cierra 13:00 ET.**
 
 ### **F2.2 · Gate por clase de activo**
 
@@ -355,7 +404,7 @@ max_event_id = max(ids) if ids else 0
 - Heatmap: gate único NYSE.
 - Calendario: gate NYSE con `pre_min=90`.
 
-**Hecho cuando:** los 9 tests de B.1 pasan + FX captura fuera de NYSE + equity/ETF no.
+**Hecho cuando:** los 9 tests de B.1 pasan + FX captura fuera de NYSE + equity/ETF no. **✅ 2026-09-22: `db/sessions.py` con `GATE_POR_CLASE` y fallback XNYS; 9 tests M-OPS-04 PASS; radar filtra `continue` por símbolo (no aborta); heatmap gate NYSE único en `main()`; calendario `pre_min=90`. Pendiente: confirmación con ciclo en vivo.**
 
 ### **F2.3 · Particiones UTC explícitas**
 
@@ -369,7 +418,7 @@ max_event_id = max(ids) if ids else 0
 - Crear hasta `2027_12`.
 - Alerta si falta el mes+1.
 
-**Hecho cuando:** A5 muestra límites contiguos a `00:00+00`.
+**Hecho cuando:** A5 muestra límites contiguos a `00:00+00`. **⏸ PREPARADO 2026-09-22, no ejecutado: backup `heatmap_stock_pre_F2.3_20260922_224433.dump` (103 MB, contenedor `pg_db`) + script `db/generate_migrate_partitions_utc.py` → SQL `db/migrate_partitions_utc.sql` (38 particiones UTC, 14 legacy). A5 confirma hoy límites `-05` (medianoche Lima); ~20.300 filas del día 1 (00–05 h UTC) cambiarán de partición al ejecutar.**
 
 ### **F2.4 · Roles y credenciales**
 
@@ -523,6 +572,8 @@ ALTER TABLE fact_market_series
 
 **Hecho cuando:** 100% de filas nuevas tienen `update_mode` poblado.
 
+**✅ Verificado en vivo (2026-09-23, changelog v2.3.5):** en la ejecución real del radar se detectó **E-RAD-16** — `execute_values` de psycopg2 no adapta `cycle_id` como `uuid.UUID` (`can't adapt type 'UUID'`) → el ciclo capturaba pero escribía 0 filas. **Fix:** `db/market_repository.py:133` convierte a `str(row['cycle_id'])`. Tras el fix, 15/15 símbolos FX+cripto se escribieron en `fact_market_series` con `cycle_id`, `update_mode=streaming` y `feed_delay_s=0` verificados.
+
 ### **F3.4 · Prioridad y circuit breaker por exchange**
 
 **Cierra:** E-RAD-04.
@@ -537,6 +588,8 @@ ALTER TABLE fact_market_series
 - Breaker separado por exchange.
 
 **Hecho cuando:** un fallo simulado de `CBOE` no afecta a `NASDAQ`.
+
+**✅ Verificado en vivo (2026-09-23, changelog v2.3.5):** durante la verificación fase 3 se detectó **E-RAD-17** — `asset_class_de()` en `db/sessions.py` devolvía `"forex"` pero `GATE_POR_CLASE` define la clave `"fx"`, por lo que todos los pares FX nocturnos (24/5) caían al gate default de NYSE y se omitían del ciclo (miércoles 00:32 ET, FX abierto, 0 pares capturados). **Fix:** devolver `"fx"`. Tras el fix, el radar capturó los 13 pares/commodities FX del universo además de 2 cripto (15/15 capturados y escritos).
 
 ### **F3.5 · Reintento + modo estricto + reconciliación**
 
@@ -732,7 +785,7 @@ CREATE TABLE fact_market_bar_15m (
 **Cierra:** E-RAD-01, D12.
 
 **Duración:** 2 días
-
+convertir en alembic y luego migralo en la bd, usando el proyecto proy_bd_heatmap
 ```sql
 CREATE TABLE fact_market_indicator_tf (
     asset_id       integer     NOT NULL,
@@ -747,6 +800,8 @@ CREATE TABLE fact_market_indicator_tf (
 
 **Hecho cuando:** `RSI|15` en la tabla coincide con `POST /america/scan` (`RSI|15`).
 
+**✅ Verificado (2026-09-23, changelog v2.3.6):** tabla creada vía **migración Alembic `0003`** de `proy_bd_heatmap` (particiones mensuales UTC `2026_09`…`2027_12`, fronteras a 00:00 UTC como `fact_market_bar_15m`) y aplicada a `heatmap_stock` (BD en revisión `0003 (head)`; 9 tests del proyecto PASS, incl. `test_fact_market_indicator_tf`). Población: el radar persistió las filas largas en cada ciclo (`market_service.process_radar_batch` → `db/indicator_repository.insert_indicator_tf_batch`, bloques `|5` y `|15` por D12, mismo `timestamp_utc`/`asset_id` del ciclo; fallo de proyección no tumba el ciclo). **Aceptación en vivo ✅:** `scripts/build_indicator_tf.py --from-scan` escribió 190 filas (95 símbolos del universo × tf `15`/`5`; NVDA/SPY/QQQ con `rsi`, `cci20`, `adx`, `change_pct`, `volume|15` y `pivot_r3` poblados) y `--verify` reportó **95/95 `RSI|15` de la tabla = scan en vivo (tol 0,5)**. `--status` para reporte por TF. Nota: el histórico anterior a F3.2 no tiene bloques `|TF` (el `CAMPOS` extendido data del 2026-09-22); su reempaquetado es alcance de F4.7.
+
 ### **F4.3 · `latest_market_tick`**
 
 **Cierra:** E-DSH-04.
@@ -757,32 +812,34 @@ CREATE TABLE fact_market_indicator_tf (
 
 **Hecho cuando:** el dashboard lee 110 filas en vez de escanear `fact_market_series`.
 
+**✅ Verificado (2026-09-23, changelog v2.3.7):** tabla creada vía **migración Alembic `0004`** (no particionada: una fila por `asset_id`, PK `asset_id`) y aplicada a `heatmap_stock`. El radar la reescribe en cada ciclo (`market_service.process_radar_batch` → `db/latest_tick_repository.upsert_latest_tick_batch`, ON CONFLICT `(asset_id)` DO UPDATE, mismo `timestamp_utc`/`cycle_id` del ciclo; fallo no tumba el ciclo). Contiene el bloque base (régimen 1D), el bloque `|15` (etiquetado 15m) y trazabilidad F3.3 (`update_mode`, `feed_delay_s`, `cycle_id`, `fetched_at`). **En vivo ✅:** `scripts/build_latest_tick.py --prime` pobló 95 filas (70 equity + 25 etf; NVDA/SPY/QQQ con base + `RSI|15` correctos) y `--status` reporta cobertura/frescura y `get_latest_ticks()` (joins dim_asset) como la lectura de ~110 filas de la aceptación. **Pruebas ✅** 51 tests proy_scrapping_detail (6 F4.3 nuevos).
+
 ### **F4.4 · Snapshots con columnas explícitas**
 
 **Cierra:** E-HM-08, E-HM-10.
 
 **Duración:** 2 días
 
-**Cambio:** migrar `raw_vector` a columnas (`volume`, `avg_vol_10d`, `volatility_d`, `high_52w`, `low_52w`, `update_mode`, `fetched_at`).
+**Cambio:** migrar `raw_vector` a columnas (`volume`, `avg_vol_10d`, `avg_vol_30d`, `volatility_d`, `change_abs`, `high_52w`, `low_52w`, `update_mode`, `fetched_at`).
 
-**Hecho cuando:** tamaño por fila < 1 kB.
+**Hecho cuando:** tamaño por fila < 1 kB; `raw_vector` se conserva pero deja de ser la fuente principal.
+
+**✅ Verificado (2026-09-23, changelog v2.3.7):** **migración Alembic `0005`** añade las 9 columnas a `fact_heatmap_snapshot` (ALTER sobre el padre particionado, propagado automáticamente a las particiones — verificado en `2026_09`) y aplicada a `heatmap_stock`. `scrapper_heatmap_v1.py` escribe `parse_vector` → columnas por nombre (volumen, medias 10/30 d, `Volatility.D`, `change_abs`, máx/mín 52 semanas, `update_mode` canónica con `stream_status` como alias legacy) y `fetched_at` = instante real del fetch (E-HM-10; `fetch_heatmap_data` ahora devuelve 3-tupla). **Pruebas ✅** 10 tests proy_heatmap (2 F4.4 nuevos) + columna `fetched_at` en partición verificada por la suite de migraciones. Nueva captura completa el histórico (las 7.000 filas previas conservan las columnas en NULL, al ser previas a la migración).
 
 ### **F4.5 · Resolver SCD2 en `dim_asset`**
 
 **Cierra:** E-BD-04, I4.
-
 **Duración:** 1 día
-
 **Cambio:** D7 → Tipo 1. Quitar `valid_from/valid_to/current_version` o dejar `UNIQUE (symbol) WHERE current_version`.
 
 **Hecho cuando:** esquema coherente con D7.
 
+**✅ Verificado (2026-09-23, changelog v2.3.8):** migración Alembic `0006` aplicada a `heatmap_stock`. `dim_asset` pasa a Tipo 1: se dropean `valid_from`, `valid_to`, `current_version` (E-BD-04: `symbol` era UNIQUE global — el SCD2 con `current_version` nunca pudo tener varias filas por símbolo). Funciones (`upsert_heatmap_snapshot`, `upsert_market_series`), vistas (`vw_heatmap_enriched`, `vw_market_live`) e índices `idx_dim_asset_active/class` reconstruidos sin `current_version`; `idx_dim_asset_symbol` eliminado (duplicaba `dim_asset_symbol_key`). `downgrade()` restaura el SCD2 completo. Consumidores corregidos: `seed_dim_asset.py`, `seed_symbols.py`, repos de `proy_scrapping_detail`, `scrapper_heatmap_v0/v1`, `heatmap_repository`, `download_iconos_mercado.py`. BD en `0006 (head)`, `dim_asset`=1.669, sin resquicios de SCD2 (0 referencias en runtime).
+
 ### **F4.5b · `dim_asset`: logical_key + resolución SCD2**
 
 **Cierra:** E-BD-04, E-RAD-06, I4, M-DAT-06.
-
 **Depende de:** F2.5.
-
 **Duración:** incluida en F4.5
 
 **Cambios:**
@@ -794,34 +851,47 @@ CREATE TABLE fact_market_indicator_tf (
 
 **Hecho cuando:** `dim_asset` tiene todas las columnas del mapeo canónico y solo un índice único sobre `symbol`.
 
+**✅ Verificado (2026-09-23, changelog v2.3.8):** la misma migración `0006` consolida en `dim_asset` las 4 columnas F2.5: `logical_key` (varchar(20)), `is_canonical` (bool, default false), `role` (`'primary'`/`'fallback'`, CHECK `chk_dim_asset_role`) y `feed_delay_s` (int, backfill: 900 equity/ETF/`common|preferred|unit`, 600 future, 0 resto). **Mapeo canónico en vivo:** 6 claves (VIX|DXY|TLT|US10Y|ORO|OIL) = 12 símbolos (→ `TVC:DXY` nuevo, `role=primary`, `is_canonical`, `feed_delay_s=0`; CBOE:VX1!, ICEUS:DX1!, NYMEX:CL1!, CBOT:ZB1! como `fallback`=600; AMEX:UUP/USO/NASDAQ:TLT como `primary`=900, etc.). Índice único parcial `uq_dim_asset_canonical_logical_key (logical_key) WHERE logical_key IS NOT NULL AND is_canonical` → **1 canónico por clave**. `dim_asset` 1.668→1.669; secuencia 4.701; `feed_delay_s` sin NULL (0/600/900: 21/9/1.639); `seed_symbols.py` ahora puebla las 4 columnas (`MAPEO_LOGICAL`/`FEED_DELAY_CLASE`) → check 0 faltantes.
+
 ### **F4.6 · Eventos: upsert condicional**
 
 **Cierra:** E-CAL-02, E-BD-03.
-
 **Duración:** 1 día
-
 **Cambio:** B.3 + `captured_at = now()`.
-
 **Hecho cuando:** `last_updated_at` solo cambia si cambia el payload.
 
 ### **F4.7 · Reempaquetado del histórico**
 
-**Cierra:** E-RAD-01 histórico, H3 residual.
+> **🛑 DECISIONADO (2026-09-23, changelog v2.3.9):** **descartado / descopado.** Por
+> directiva del usuario se **obvian los históricos**: el ecosistema arranca **desde
+> cero con BD en blanco** (`alembic upgrade head` sobre una BD nueva) y el
+> histórico acumulado hasta hoy (capturado con `timestamp_utc` = hora de captura,
+> retraso posible de 15 min, captura 24 h contaminada fuera de sesión, equity
+> solo desde 2026-08-22) **no se reempaqueta** ni se migra. La presente sección
+> queda como referencia documental; **no se construye el job offline**.
 
-**Duración:** 3 días
+**Cierra:** E-RAD-01 histórico, H3 residual (original).
+**Duración:** 3 días (original).
+**Cambio (original):** job offline que lee los CSV existentes y genera `fact_daily_context` + barras retroactivas.
+**Hecho cuando (original):** existen barras de 15 min desde 2026-08-22 para equity.
 
-**Cambio:** job offline que lee los CSV existentes y genera `fact_daily_context` + barras retroactivas.
-
-**Salvedades a documentar:**
-
-- `timestamp_utc` es hora de captura, no del dato.
-- Posible retraso de 15 min.
-- Captura 24 h (contaminada fuera de sesión).
-- Equity solo desde 2026-08-22.
-
-**Hecho cuando:** existen barras de 15 min desde 2026-08-22 para equity.
+**Estado con la decisión:** contexto diario y barras retroactivas se generarán solo
+**hacia adelante** con la BD en blanco (cuando exista un job equivalente para el
+histórico creciente; no forma parte del alcance actual).
 
 ### **F4.8 · Suite nocturna de calidad**
+
+> **✅ COMPLETADO (2026-09-23, changelog v2.3.9):** script **independiente**
+> `proy_bd_heatmap/scripts/suite_calidad_nocturna.py` (solo psycopg2 +
+> python-dotenv, sin alembic; pensado para cron). Audita duplicados, huecos
+> (CHK-CICLOS, umbral 15 min en activos 24/5), nulos, ticks planos fuera de
+> sesión, `n_ticks` por barra, `close_quality` y contigüidad de particiones.
+> Exit codes `0`/`1`/`3`; estado `INFO` en ventana vacía o BD nueva para no
+> generar falsas alertas en el arranque desde cero (F4.7). Informe MD + JSON en
+> `proy_bd_heatmap/reports/`. Documentado en
+> `proy_bd_heatmap/README.md` (§ F4.8), con ejemplo de cron y códigos de
+> salida. **Validado en vivo** contra `heatmap_stock`: 13 cheques ejecutados
+> (cron de ejemplo: `05 4 * * *`).
 
 **Cierra:** E-RAD-05 mitigación.
 
@@ -838,6 +908,10 @@ CREATE TABLE fact_market_indicator_tf (
 - Contigüidad de particiones.
 
 **Hecho cuando:** corre a las 02:00 UTC y deja informe diario.
+> **✅ Verificado (changelog v2.3.9):** el script corre sobre `heatmap_stock`
+> (13 cheques; ventana 24 h) y deja informe MD + JSON en `reports/`; exit code
+> coherente con el estado (0 PASS / 1 con FAIL). El cron definitivo queda a
+> cargo del usuario (ejemplo: `05 4 * * *`, hora 04:05 UTC).
 
 ---
 
@@ -874,44 +948,33 @@ proy_dashboard/
 ### **F5.2 · Modos PRE / LIVE / CLOSED**
 
 **Cierra:** E-DSH-03.
-
 **Duración:** 1 día
-
 **Cambio:** `session_service` que lee `dim_trading_session`.
-
 **Hecho cuando:** fuera de ventana muestra resumen del día y cuenta regresiva.
 
 ### **F5.3 · Banner de frescura por panel**
 
 **Cierra:** E-RAD-02.
-
 **Duración:** 1 día
-
 **Cambio:** `as_of`, `feed_delay`, `ingest_lag` por panel — **por activo**, no global (Test D: 0/600/900 s según clase).
-
 **Hecho cuando:** cada panel muestra su antigüedad real.
 
 ### **F5.4 · Los 4 paneles del MVP**
 
 **Duración:** 4 días
-
 **Panel 1 — Pre-apertura y régimen**
-
 - VIX, DXY, US10Y, NQ/ES, BTC.
 - **Nuevo:** `gap`, `premarket_change`, `premarket_volume` por activo (campos confirmados en Test E y filtrables en Test L).
 - **Bloqueado parcialmente por D2/D3** → depende de F2.5.
 
 **Panel 2 — QQQ/SPY/ORO en 15 min**
-
 - SMA20/50, VWAP, pivotes.
 - Usa `Pivot.M.Camarilla.R3|15` (pivote diario, Test H).
 
 **Panel 3 — Próximos eventos**
-
 - Cuenta regresiva + sorpresa con polaridad.
 
 **Panel 4 — Termómetro de riesgo**
-
 - Percentil 60d de VIX, US10Y, TLT.
 - Usa el mapeo canónico de F2.5.
 
@@ -920,19 +983,14 @@ proy_dashboard/
 ### **F5.5 · `session_service` con ET y Lima**
 
 **Cierra:** E-DSH-03.
-
 **Duración:** 4 h
-
 **Hecho cuando:** antes y después del 1-nov muestra las horas correctas.
 
 ### **F5.6 · Panel de eventos**
 
 **Cierra:** E-DSH-05.
-
 **Duración:** 2 días
-
 **Cambio:** cuenta regresiva, ventana de silencio, sorpresa con polaridad.
-
 **Hecho cuando:** NFP y CPI con sorpresa correcta.
 
 ---
@@ -940,81 +998,61 @@ proy_dashboard/
 ## **FASE 6 · Validación y score**
 
 **Duración:** 15–20 días (en paralelo con F5)
-
 **Objetivo:** saber si el score aporta (H13, H14, H17).
-
 **Criterio de salida:** informe walk-forward con IC.
 
 ### **F6.1 · Estudio forward-return**
 
 **Cierra:** E-DSH-01, H13.
-
 **Duración:** 5 días
-
 **Cambio:** walk-forward del score y de cada componente, retornos a +15/+30/+60 min, con señal desplazada por el feed delay (**por clase de activo**: 0/600/900 s — Test D).
-
 **Hecho cuando:** informe con IC; H13 rechazada o no.
 
 ### **F6.2 · Estudio de eventos**
 
 **Cierra:** H14.
-
 **Duración:** 5 días
-
 **Cambio:** reacción media por importancia y sorpresa, ≥30 eventos con actual+forecast.
-
 ### **F6.3 · Validación cruzada TV vs propio**
 
 **Cierra:** D4.
 
 **Duración:** 3 días
-
 **Cambio:** comparar `RSI|15`, `ADX|15`, `CCI20|15`, `Pivot.M.Camarilla.R3|15` de TV vs cálculo propio en 5–10 sesiones.
-
 **Hecho cuando:** diferencias documentadas; decisión D4 cerrada (incluye si se mantiene o retira el pivote diario de TV del `CAMPOS`).
 
 ### **F6.4 · Score como contexto**
 
 **Cierra:** E-DSH-01, D10.
-
 **Duración:** 2 días
-
 **Cambio:** valor + percentil + fase; sin zonas COMPRAR/VENDER hasta rechazar H13.
 
 ### **F6.5 · RVOL por hora del día**
 
 **Cierra:** E-DSH-02.
-
 **Duración:** 2 días
-
 **Cambio:** solo equity/ETF (Q24 cerrada: FX no tiene volumen nocional; E-RAD-14: el primario FX_IDC lo corrompe).
-
 **Hecho cuando:** mediana ≈ 1.0 a cualquier hora.
 
 ### **F6.6 · Amplitud sectorial**
 
 **Cierra:** H16, E-RAD-07.
-
 **Duración:** 3 días
-
 **Cambio:** ETF sectoriales (F3.12) + heatmap filtrado.
 
 ### **F6.7 · `fact_symbol_score` / `fact_market_context`**
 
 **Cierra:** E-BD-07.
-
 **Duración:** 2 días
 
 ### **F6.8 · `fact_event_reaction`**
 
 **Cierra:** E-BD-05.
-
 **Duración:** 3 días
 
 ### **F6.9 · `fact_sector_snapshot`**
 
 **Cierra:** H16.
-
 **Duración:** 2 días
 
 ---
@@ -1022,9 +1060,7 @@ proy_dashboard/
 ## **FASE 7 · Calidad, seguridad y retención**
 
 **Duración:** 6–8 días
-
 **Objetivo:** cerrar deuda.
-
 **Criterio de salida:** retención aplicada, backups probados, docs alineadas.
 
 ### **F7.1 · Calendario: llamada semanal (M-CAP-16)**
@@ -1151,7 +1187,7 @@ Con esto, **el lunes 2026-09-28 arranca F2** con F1 cerrado y F3.1 en implementa
 | Score validado | No | No | Parcial | Sí |
 | Mejoras del informe v3 cubiertas | 55/55 (100%) | 55/55 | 55/55 | 55/55 |
 
-**Nota metodológica (reconciliación con Evaluación v3.2):** 16 hipótesis = 8 previas + 8 cerradas por tests D/E/F/G/H/C (H1, H6, H7b, H19, H20, H21, H22, H24) + H7a/H23 ya previas. 9 dudas = 3 previas + 6 de tests (Q15, Q16 **A FAVOR** tras reapertura, Q17, Q22, Q23, Q24); Q18–Q21 se promovieron a errores E-HM-13/14/E-CAL-06/07 en lugar de contarlas como dudas. Errores totales con código: 37 (35 v3 + E-RAD-14 + E-RAD-15 + M-CAP-18 como mejora). Los 4 S1 activos son E-RAD-01, E-RAD-02, E-BD-01, E-RAD-14; F1.7 solo cierra E-RAD-14, los otros 3 requieren F2–F5.
+**Nota metodológica (reconciliación con Evaluación v3.2):** 16 hipótesis = 8 previas + 8 cerradas por tests D/E/F/G/H/C (H1, H6, H7b, H19, H20, H21, H22, H24) + H7a/H23 ya previas. 9 dudas = 3 previas + 6 de tests (Q15, Q16 **A FAVOR** tras reapertura, Q17, Q22, Q23, Q24); Q18–Q21 se promovieron a errores E-HM-13/14/E-CAL-06/07 en lugar de contarlas como dudas. Errores totales con código: 37 (35 v3 + E-RAD-14 + E-RAD-15 + M-CAP-18 como mejora). **E-RAD-01 cerrado por F4.2** (2026-09-23). Los 3 S1 activos son E-RAD-02, E-BD-01 y E-RAD-14; F1.7 (E-RAD-14) y el gate de F2.1 (E-BD-01) ya mitigan dos de ellos.
 
 ---
 
@@ -1163,3 +1199,71 @@ Con esto, **el lunes 2026-09-28 arranca F2** con F1 cerrado y F3.1 en implementa
 | 2.1 | 2026-09-22 | Observaciones de auditoría: Estado de la evidencia; F1.1/F1.2 con trazabilidad Q→E; excepción D14 pre-ADR en F1.7; F2.5 (mapeo canónico); F3.12 (ampliar universo); F3.2 con `Pivot.M.Camarilla.R3\|15`; F3.6 (M-CAP-15); F4.5b (dim_asset); F7.7b (M-DOC-02); Sección 5 recalculada; R16/R17 |
 | 2.3 | 2026-09-22 | **Reporte técnico v3 (Tests J/K/L/M) + Evaluación v3.2** integrados: **Q16 reabierta y cerrada A FAVOR** (`POST /america/scan?label-product=heatmap-stock` validado, ~1,5 s, payload reutilizable) → **F3.1 Plan A implementable, Plan B descartado, T12 ✅**; catálogo de TFs validado (`1,5,15,30,60,120,240,1W,1M`) y aplicado a F3.2 (bloque `\|60` nuevo); **58 campos filtrables** incl. `gap` + `premarket_*` (F3.2/F3.3/F3.7, filtro simple funciona; el 400 era del payload completo del frontend); patrón anti-429 (`REQUEST_DELAY_S=1.2`, `MAX_RETRIES=3`) en F3.1 y R4; conteos reconciliados a 16 hipótesis/9 dudas/37 errores/D1 confirmada + D14; R4 y R15 marcados mitigados; Sección 4 sin T12 pendiente; M-CAP-03 reformulada y M-CAP-18 en F4.1b/F4.1c; F7.7 documenta catálogo de TFs y semántica `premarket_*`/`gap`. |
 | **2.3.1** | **2026-09-22** | **Contraste F1 contra código real** (`proy_heatmap`, `proy_scrapping_detail`): 15 errores con cita `archivo:línea` en la portada. **F1.2 confirmado vía `event_service.py:53,63-64`** (E-CAL-06/E-CAL-07 verificados; matiz: doble escritura solo con `DB_WRITE_ENABLED=true` y semántica distinta `max_event_id` vs `max_ts`). `Origen` con cita exacta en F1.3 (`scrapper_heatmap_v1.py:370`), F1.4 (`scraper_v5.py:289-301` + `market_service.py:87`), F1.5 (`scrapper_heatmap_v1.py:295`), F1.8 (`scrapper_heatmap_v1.py:370/:131`), F3.4 (`scraper_v5.py:245/:286-292`), F3.6 (`calendario_v5.py:407-409/:105/:443`), F3.8 (`scrapper_heatmap_v1.py:93`). **E-HM-15 añadido a F3.7** (precedencia `or`/ternario). **E-RAD-08 asignado a F7.2** (`scraper_v5.py:275` rotación I/O dentro del ciclo). |
+| **2.3.2** | **2026-09-22** | **F0 y F1 implementadas.** **F0.1 ✅** A1–A16 ejecutados contra `heatmap_stock` (`proy_scrapping_detail/db/verify_a1_a16.sql` + `run_verify_a1_a16.py` → `docs/Planilla F0.1 - Verificación A1-A16 (2026-09-22).md`): cierra H3, H4 (matiz), H5, H8, H11, H15, Q4, Q8, H14; refuta H9 y H17; confirma E-RAD-05 (backfill FAILED×3), E-RAD-04 (yields con RSI/vol 100% nulos), E-HM-01 (snapshot=1000), E-HM-05 (sin logo), E-BD-04, E-BD-08; nuevo E-BD-03 (escala `−1/0/1`). **F0.3 ✅** `docs/ADR 0001 - Decisiones D1-D14 (2026-09-22).md` con D1/D12/D13/D14 confirmadas (D14 firmada retroactiva) y D2-D11 adoptadas. **F1 ✅** cambios aplicados y verificados: F1.1 (ventana `MAX(timestamp_utc)-15min`, labels `%m-%d %H:%M`, lookup a 24h; `get_heatmap_last_hour`→1000 filas, evolución OK con 144h); F1.2 (`safe_int` filtrado + `guardar_checkpoint` eliminado de `event_service`); F1.3 (orden fetch→validar→DDL→procesar + estado `SKIPPED` fuera de sesión); F1.4 (contrato `{'inserted','status','error'}` en `market_service`/`flush_radar_batch`; buffer solo se limpia con SUCCESS); F1.5 (`records_failed = max(fetched-upserted,0)`; 1000/0→1000 ✓); F1.6 (comentario `source_checksum` → `market_repository.py:118`); F1.7 (`CONFIG_ACTIVOS` EURUSD → `OANDA:EURUSD` + `FX:EURUSD`; verificación de volume pendiente de ciclo en vivo); F1.8 (DDL único en `main()`, retirado de `process_heatmap_data`). Verificación: `py_compile` OK en 8 módulos. |
+| **2.3.3** | **2026-09-22** | **FASE 2 parcial.** **F2.1 ✅** `dim_trading_session` creada y poblada (`proy_scrapping_detail/db/create_dim_trading_session.py`, XNYS exchange_calendars 4.13.2): 630 días, 432 sesiones 2026-01→2027-09; `is_early_close` ✓ (26/11 festivo, 27/11 cierra 13:00 ET); cierra E-BD-01/E-BD-06/E-OPS-01 vía gate. **F2.2 ✅** `db/sessions.py` con `en_ventana_nyse`/`en_ventana_fx`/`en_ventana_cripto`/`GATE_POR_CLASE` (fallback XNYS si BD cae); 9 tests M-OPS-04 PASS; radar v5 filtra símbolo con `continue` (no aborta); heatmap gate NYSE en `main()`→SKIPPED; calendario gate `pre_min=90`. **F2.3 ⏸** pospuesta: backup `heatmap_stock_pre_F2.3_20260922_224433.dump` (103 MB, pg_db) + SQL `db/migrate_partitions_utc.sql` generado por `db/generate_migrate_partitions_utc.py` (38 particiones `00:00+00` hasta `2027_12`, 14 legacy). **F2.4/F2.5** quedan pendientes a petición del usuario. `py_compile` OK en 6 módulos. |
+| **2.3.4** | **2026-09-22** | **FASE 3 completa (F3.1–F3.12) + pruebas de fase 3.** **F3.1/F3.2 ✅** `CAMPOS_LIST`=33 validado en vivo (`POST /america/scan?label-product=heatmap-stock`, 33/33 campos, `update_mode=delayed_streaming_900`, `RSI\|15` poblado). **F3.6 ✅** calendario: RotatingFileHandler 10 MB×7, `fetch_calendar_events` con reintento/backoff 3×5 s distinguiendo `ApiSinEventos` (checkpoint intacto) de `ErrorApi`. **F3.12 ✅** universo 110→123 (`FUTUROS_PREAPERTURA` ES1=`CME_MINI:ES1!`, `ETF_SECTORIALES_SPDR` 12 tickers); fix `fetch_from_scanner` (futuros sin clave `symbol`, inválidos→`None`); `AMEX:TLT`→`NASDAQ:TLT`. **F3.7 ✅** heatmap: 29 columnas con `description`, filtro `exchange in_range` (10.721 filas), app filtra OTC/preferred/liquidez ≥20M USD→top 1000; `company_name`+`asset_class`+`logo_id` verificados en BD. **F3.8 ✅** cache de asset_id + `alta_masiva_assets` (DO NOTHING RETURNING en lotes 500) + reconciliación ≤3 SQL de dimensión; ejecutado (1.083 cache, 167 nuevos). **F3.11 ✅** `monitor_alertas.py` (A1 frescura en ventana NYSE, A2 429 en logs, A3 DB_WRITE_ENABLED=false, Telegram best-effort). **F3.5 ✅** `--reconcile --dry-run` sin huecos. **F3.9 ⏸** `run_heatmap.sh` preparado sin cron (por directiva). **Pruebas ✅** 21 tests pytest (`proy_scrapping_detail/tests/test_fase3_radar.py` 10, `test_fase3_calendario.py` 3; `proy_heatmap/tests/test_fase3_heatmap.py` 8) + `scripts/verificar_endpoints.py` en ambos proyectos (endpoints en vivo OK: batch, GET /symbol por clase, heatmap sin OTC/preferidas/logoid None). Detalle: `setup_logging()` del calendario adjunta handlers al logger del módulo (basicConfig no-op bajo pytest). |
+| **2.3.5** | **2026-09-23** | **Verificación en vivo de los 3 scripts + 2 bugs corregidos + alta de respaldo EURUSD.** **Radar (radar_v5) ✅** ejecutado a las 00:32 ET (NYSE cerrado): captura FX+cripto por gate de clase; tras dos fixes quedó **15/15 escrituras en `fact_market_series`** con `cycle_id`, `update_mode=streaming`, `feed_delay_s=0`. **Fix E-RAD-16 ✅** `db/market_repository.py:133` convierte `cycle_id` a `str` (`execute_values` no adapta `uuid.UUID` → `can't adapt type 'UUID'`; antes: ciclo capturado pero 0 filas en BD). **Fix E-RAD-17 ✅** `db/sessions.py:79` `asset_class_de()` devuelve `"fx"` (antes `"forex"` → caía al gate default NYSE → todo el forex nocturno 24/5 se omitía). **Alta `FX:EURUSD` ✅** respaldo del par (F1.7/D14) dado de alta en `dim_asset` (`asset_id=4683`, `radar_v5`, verificado `volume=20743>0`, `streaming`) → ahora se persiste en BD (antes solo CSV); serie dual verificada en `fact_market_series` (FX 1.14287/20762 + OANDA 1.14288/13243, mismo ciclo). **Calendario ✅** gate `pre_min=90` omite captura a 00:32 ET (comportamiento F2.2); vía `capturar_eventos` (mismo pipeline BD): 59 eventos US upserted en `fact_economic_event`, audit SUCCESS 59/59, checkpoint `last_event_id=421371`/`records_processed=59`/`ACTIVE`. **Heatmap ✅** fuera de ventana NYSE → `SKIPPED` (0 escrituras, audit correcto; `fact_heatmap_snapshot` intacto en 4.000). **Pendiente:** e2e completo con equity/ETF en sesión abierta; doble registro de auditoría por ciclo radar (flush + main) anotado como observación menor. |
+| **2.3.6** | **2026-09-23** | **FASE 4 · F4.1/F4.1b y F4.2 implementadas y verificadas.** **F4.1 ✅** `db/bar_repository.py` + `scripts/build_market_bar_15m.py`: agregación de `fact_market_series` en barras de 15 min UTC (`bucket_15m_utc`, OHLCV, `volume_delta`, `n_ticks`, `is_regular` vía `dim_trading_session` XNYS para equity/ETF) con upsert mensual `ON CONFLICT (asset_id, bar_start_utc)` y auditoría `bar_15m`; corrida real materializó 18.741 barras (124 activos, 17–23/09), re-corrida idempotente. **F4.1b ✅** regla de cierre (M-CAP-03 reformulada): `close_quality_para_offset` con ventanas `[6,20]→definitive`, `[−15,5]→provisional` (offsets 5 s caen a provisional por la ambigüedad E-RAD-15), resto `unknown`; hoy todas `unknown` porque el muestreo T−10 s es F4.1c (pendiente). Fix de particiones: `asegurar_particion` por mes (commit por mes, fronteras `timestamptz` UTC). **F4.2 ✅** migración Alembic **`0003`** en `proy_bd_heatmap` (`fact_market_indicator_tf` formato largo, particiones UTC `2026_09`→`2027_12`) aplicada a `heatmap_stock`; `db/indicator_repository.py` (proyección bloques `|TF`→largas, upsert ON CONFLICT `(asset_id,timestamp_utc,tf)`); radar persiste filas por ciclo (`process_radar_batch(scanner_raw=…)`); `scripts/build_indicator_tf.py` (`--status`/`--from-scan`/`--verify`). **Aceptación en vivo ✅** `RSI|15` tabla = scan en vivo **95/95** (tol 0,5); 190 filas en ventana (95 × tf 15/5; NVDA/SPY/QQQ con `pivot_r3` poblado). **Pruebas ✅** 45 tests `proy_scrapping_detail` (25 F4.1b barras + 8 F4.2 indicadores TF + 12 previos) + 8 `proy_heatmap` + 9 `proy_bd_heatmap` (incl. `test_fact_market_indicator_tf`). |
+| **2.3.7** | **2026-09-23** | **F4.3 (latest_market_tick) y F4.4 (snapshots columnas explícitas) implementadas y verificadas.** **F4.3 ✅** migración Alembic **`0004`** (`latest_market_tick`: 1 fila/asset_id, PK asset_id, no particionada) aplicada a `heatmap_stock`; `db/latest_tick_repository.py` (proyección base + bloque `|15` + trazabilidad F3.3; upsert ON CONFLICT `(asset_id)`); radar la reescribe por ciclo (`process_radar_batch` → 5c); `scripts/build_latest_tick.py` (`--status`/`--prime`); `get_latest_ticks()` con join dim_asset. **En vivo ✅** `--prime` = 95 filas (70 equity + 25 etf; NVDA/SPY/QQQ con base y `RSI|15` correctos, `update_mode=delayed_streaming_900`; E-DSH-04: lectura de ~110 filas sin escanear `fact_market_series`). **F4.4 ✅** migración Alembic **`0005`** añade a `fact_heatmap_snapshot` (padre + particiones por ALTER automático) `volume, avg_vol_10d, avg_vol_30d, volatility_d, change_abs, high_52w, low_52w, update_mode, fetched_at` (M-DAT-05, E-HM-08/E-HM-10); `scrapper_heatmap_v1.py` escribe las columnas por nombre y `fetched_at` = instante del fetch (`fetch_heatmap_data` ahora 3-tupla); `raw_vector` conservado pero deja de ser fuente principal. **Pruebas ✅** 51 tests `proy_scrapping_detail` (6 F4.3) + 10 `proy_heatmap` (2 F4.4) + 11 `proy_bd_heatmap` (test_latest_market_tick + test_fact_heatmap_snapshot_columnas); BD en `0005 (head)`. |
+| **2.3.8** | **2026-09-23** | **F4.5 (SCD2 → Tipo 1) y F4.5b (mapeo canónico F2.5) implementadas y verificadas.** **Migración Alembic `0006`** aplicada a `heatmap_stock` (BD en `0006 (head)`): se dropean `valid_from/valid_to/current_version` (E-BD-04, D7 → Tipo 1) y se añaden `logical_key`, `is_canonical`, `role` (`primary`/`fallback`, CHECK) y `feed_delay_s` (backfill 900/600/0 por clase); **mapeo canónico** de las 6 claves F2.5 (VIX|DXY|TLT|US10Y|ORO|OIL) con alta de **`TVC:DXY`** e índice único parcial `uq_dim_asset_canonical_logical_key` (1 canónico por clave); funciones (`upsert_heatmap_snapshot`, `upsert_market_series`), vistas (`vw_heatmap_enriched`, `vw_market_live`) e índices `idx_dim_asset_active/class` reconstruidos **sin `current_version`**; `idx_dim_asset_symbol` eliminado. **Consumidores corregidos**: `seed_dim_asset.py`, `seed_symbols.py` (`MAPEO_LOGICAL`/`FEED_DELAY_CLASE`, puebla las 4 columnas), `db/latest_tick_repository`, `db/market_repository` (`WHERE is_active`), `db/bar_repository` (JOIN sin `current_version`), `scrapper_heatmap_v0/v1`, `heatmap_repository`, `download_iconos_mercado.py`; scripts legacy `proy_heatmap/scripts` retirados (eliminados 01/02/04/08, archivados 03/06/07 en `docs/old/`, README → Alembic). **Verificación en vivo ✅** `dim_asset`=1.669, secuencia 4.701, 0 `feed_delay_s` NULL (0/600/900=21/9/1.639), funciones upsert OK (insert + ON CONFLICT), vistas sin `current_version` y con datos, `seed_symbols.py --check`=0 faltantes, `build_latest_tick.py --status` OK. **Pruebas ✅** 14 tests `proy_bd_heatmap` (3 nuevos F4.5/F4.5b) + 51 `proy_scrapping_detail` + 10 `proy_heatmap`. |
+| **2.3.9** | **2026-09-23** | **FASE 4 · F4.7 descartada y F4.8 completada.** **🛑 F4.7 descopada por directiva del usuario**: se **obvian los históricos** (la captura previa tiene `timestamp_utc` = hora de captura, retraso posible de 15 min, captura 24 h contaminada fuera de sesión, equity solo desde 2026-08-22); el ecosistema **inicia desde cero con BD en blanco** (`alembic upgrade head` en BD nueva) y no se construye el job de reempaquetado. **F4.8 ✅** script **independiente** `proy_bd_heatmap/scripts/suite_calidad_nocturna.py` (solo psycopg2 + python-dotenv, para cron): audita duplicados, huecos en activos 24/5 (>15 min), nulos, ticks planos fuera de sesión, `n_ticks` por barra, `close_quality` y contigüidad de particiones; exit codes `0`/`1`/`3`; estado `INFO` en ventana vacía o BD recién creada (sin falsas alertas en el arranque desde cero); informe MD + JSON en `reports/` (gitignored). **Validado en vivo ✅** contra `heatmap_stock`: 13 cheques ejecutados, informe generado, exit coherente (recomendación cron `05 4 * * *`). Documentado en `proy_bd_heatmap/README.md` (§ F4.8). |
+| **2.3.10** | **2026-09-24** | **Verificación en vivo de los 3 scripts en sesión NYSE abierta + fix del gate NYSE del heatmap + Anexo A (uso de disco y proyección).** **Radar ✅** 123/123 símbolos capturados y escritos en `fact_market_series` (224 filas TF en `fact_market_indicator_tf`, 123 en `latest_market_tick`, auditoría `SUCCESS`). **Calendario ✅** 81 eventos upserted en `fact_economic_event`, checkpoint `event_id=421420`, auditoría `SUCCESS`. **Heatmap ✅** 1000 snapshots/sesión en `fact_heatmap_snapshot`, auditoría `SUCCESS`. **Fix gate NYSE ✅** `proy_heatmap/db/sessions.py:46` usaba `.replace(tzinfo=timezone.utc)` (reetiqueta sin convertir) → con la tz de sesión de la conexión (−05:00), `opens_at=08:30−05:00` se comparaba como `08:30 UTC` en vez de `13:30 UTC` → el heatmap se saltaba el ciclo **estando el mercado abierto** (e2e pendiente del changelog v2.3.5). Fix: `.astimezone(timezone.utc)`. **Pruebas ✅** 10 `proy_heatmap` + 53 `proy_scrapping_detail` PASS. **Anexo A (uso de disco) ✅** análisis y proyección de crecimiento incorporados al final de este documento. |
+
+---
+
+# **Anexo A · Uso de disco y proyección de crecimiento**
+
+**Fecha:** 2026-09-24 · **Sesión de referencia:** 2026-09-24 (NYSE abierta, 13:10 ET / 18:10 UTC)
+
+**Método de cálculo resumido:** los bytes/registro se midieron sobre particiones reales de `heatmap_stock` (`pg_total_relation_size` ÷ `count(*)` por partición, incluye tabla + índices + TOAST), y las filas/día se proyectaron multiplicando la tasa observada por la cadencia de producción definida en el roadmap (radar `/3 min` = 480 ciclos/día teóricos con gate por clase; heatmap 28 snapshots × 1000 filas; F3.9/F4.1c). El desglose completo de consultas SQL se documenta a continuación.
+
+## A.1 · Baseline actual (2026-09-24)
+
+| Componente | Tamaño | Nota |
+| --- | --- | --- |
+| BD `heatmap_stock` | **785 MB** | `pg_database_size`, revisión `0006 (head)` |
+| `DATOS_LIVE` (CSV radar) | 421 MB | 498 archivos, rotación mensual |
+| `DATOS_LIVE_CALENDARIO` | 2 MB | |
+| Logs (`proy_heatmap/LOGS`, `logs_ejecucion`) | < 1 MB | RotatingFileHandler 10 MB×7 (F3.6) |
+| **Total** | **≈ 1.2 GB** | |
+
+Disco raíz `/`: **44 GB libres de 457 GB (91% usado)**.
+
+## A.2 · Tasas medidas el 2026-09-24 (bytes/registro)
+
+| Tabla | Filas 2026-09-24 (parcial) | B/registro (total) | Detalle |
+| --- | --- | --- | --- |
+| `fact_market_series` | 261 (123 assets/ciclo en NYSE, 15 fuera) | **331** | 2,4 M filas; tabla ~200 B + índices ~130 B |
+| `fact_market_indicator_tf` | 478 (112 assets × 2 tf) | **216** | partición `2026_09` |
+| `fact_heatmap_snapshot` | 2,000 (2 snapshots × 1000) | **1,528** | `raw_vector` JSONB ~295 B + 9 columnas explícitas (F4.4) |
+| `fact_market_bar_15m` | 0 (job F4.1 no corrido hoy) | **302** | 18.741 filas acumuladas |
+| `fact_economic_event` | 81 upserted | 2,577 | tabla estática ~709 filas |
+| `latest_market_tick` | 123 | 799 | 1 fila por activo, no crece en volumen |
+
+**Cálculo de B/registro:** `pg_total_relation_size(oid) / count(*)` por partición (incluye heap + índices + TOAST). Ejemplo `fact_market_series_2026_09`: 221,3 MB / 669.391 filas = **331 B/registro**.
+
+## A.3 · Proyección a cadencia de producción
+
+Filas/día proyectadas (roadmap F3.9/F4.1c):
+
+- **Radar** (`/3 min`): 130 ciclos NYSE × 123 assets + 350 ciclos fuera × 15 FX/cripto = **21.240 filas/día** → 21.240 × 331 B ≈ **7,0 MB/día**
+- **`fact_market_indicator_tf`** (×2 tf `|5`/`|15`): 42.480 filas/día → **9,2 MB/día**
+- **Heatmap** (28 snapshots × 1000): 28.000 filas/día → **42,8 MB/día**
+- **`fact_market_bar_15m`** (28 barras × 123 assets): 3.444 filas/día → **1,0 MB/día**
+- **Calendario**: ~81/día, tabla estable (~709 filas, 1,8 MB), crecimiento despreciable
+
+| Horizonte | Incremento BD | Incremento total (BD + CSV) | Acumulado |
+| --- | --- | --- | --- |
+| **Día** | ≈ 60,0 MB | ≈ 64,9 MB | ≈ 1,27 GB |
+| **Mes (30,4 d)** | ≈ 1,82 GB | **≈ 1,97 GB** | ≈ 3,2 GB |
+| **Año (365 d)** | ≈ 21,9 GB | **≈ 23,7 GB** | ≈ 24,9 GB |
+
+CSV (`DATOS_LIVE`) aporta ≈ 4,9 MB/día (112 MB en `202609` / 23 días en curso; rotación mensual).
+
+## A.4 · Hallazgos y conclusiones
+
+1. **El heatmap es el 71% del incremento BD** (42,8 de 60 MB/día) por `raw_vector` (~295 B) + 9 columnas explícitas F4.4 (~1,5 KB/fila). El mayor lever de ahorro es retirar/compactar `raw_vector` cuando las columnas ya estén pobladas (F4.4 mantiene `raw_vector` por compatibilidad).
+2. **`fact_market_series` es la tabla más grande** (2,4 M filas; ~90% de la BD de 785 MB): crece ~7 MB/día.
+3. **Sin riesgo de disco a 1 año** (~25 GB proyectados vs 44 GB libres), pero el **91% de uso global** del disco raíz es una señal a vigilar (otras cargas fuera del ecosistema).
+4. **Escenario BD en blanco (F4.7):** si el arranque en producción parte de `alembic upgrade head` en BD nueva, el baseline baja a ~10 MB y el año ≈ 23,7 GB (los históricos no se reempaquetan).
+5. **Recomendación (sigue a F4.8):** monitorizar con `pg_database_size` + tamaño por partición + `du` de `DATOS_LIVE` con ventana de 7 días y alerta si la proyección a 90 días supera el espacio libre; política de retención D8 (ticks 6 meses, particiones mensuales a purgar pasado N meses).

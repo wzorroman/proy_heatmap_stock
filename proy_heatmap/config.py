@@ -75,14 +75,25 @@ HEATMAP_COLUMNS = [
     "number_of_employees", "earnings_per_share_basic_ttm",
     "revenue_per_employee_ttm", "gross_profit_1Y_growth_fq",
     "sector", "logoid", "close", "pricescale",
-    "name", "update_mode", "currency",
+    "name", "update_mode", "currency", "description",
 ]
 
+# F3.7 (D6): exchanges permitidos y liquidez mínima del universo del heatmap.
+HEATMAP_ALLOWED_EXCHANGES = ("NASDAQ", "NYSE", "AMEX")
+HEATMAP_MIN_USD_VOL = 20_000_000
+
 # Payload explícito (requerido; sin columns el endpoint devuelve d[] vacío)
+# F3.7: filtro simple en el endpoint (Test J/L: funcionó con /america/scan,
+# el 400 era del payload completo del frontend, no del filtro simple).
+# El dólar-volumen (avg_volume*close >= 20M) NO se filtra aquí: es un producto
+# de dos columnas y se calcula en `filter_top_by_market_cap` (app).
 HEATMAP_BODY = {
     "columns": HEATMAP_COLUMNS,
     "markets": ["america"],
     "sort": {"sortBy": "market_cap_basic", "sortOrder": "desc"},
+    "filter": [
+        {"left": "exchange", "operation": "in_range", "right": list(HEATMAP_ALLOWED_EXCHANGES)},
+    ],
 }
 
 # Cantidad máxima de símbolos a insertar (top por market cap)

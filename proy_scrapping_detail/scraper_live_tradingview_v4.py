@@ -22,7 +22,9 @@ CAPACIDADES:
     - Extracción Zero-Library (Requests-based).
     - Estandarización UTC Nativa.
     - Gestión de Persistencia: Rolling de 7 días (LIVE) y Archivo Mensual.
-    - Redundancia Dinámica: Fallback automático entre Primarios y Respaldos.
+    - Resolución primario/respaldo por símbolo (config.py CONFIG_ACTIVOS); la
+      selección canónica de claves lógicas (VIX|DXY|TLT|US10Y|ORO|OIL) queda en
+      dim_asset (F4.5b): primario canónico + respaldos (rol 'primary'/'fallback').
 
 ESTRUCTURA DE DATOS:
     - DATOS_LIVE_2/{SYMBOL}/{SYMBOL}.csv

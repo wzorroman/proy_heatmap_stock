@@ -57,20 +57,18 @@ def partition_exists(conn: PostgreSQLConnector, tabla: str, particion: str,
     if actual:
         m = re.search(r"FROM \('([^']+)'\) TO \('([^']+)'\)", actual)
         if m:
+            # Comparar SOLO la parte de fecha (YYYY-MM-DD): ignora el offset
+            # horario ("-05" / "-05:00") que PostgreSQL devuelve según la
+            # sesión, y evita el ValueError de fromisoformat en Python < 3.11
+            # con offsets sin minutos.
             try:
-                b_from = datetime.fromisoformat(m.group(1))
-                b_to = datetime.fromisoformat(m.group(2))
+                b_from = datetime.fromisoformat(m.group(1)[:10]).date()
+                b_to = datetime.fromisoformat(m.group(2)[:10]).date()
             except ValueError:
                 b_from = b_to = None
-            expected_to_year = start_date.year + (1 if start_date.month == 12 else 0)
-            expected_to_month = (start_date.month % 12) + 1
             if (b_from is not None and b_to is not None
-                    and b_from.year == start_date.year
-                    and b_from.month == start_date.month
-                    and b_from.day == 1
-                    and b_to.year == expected_to_year
-                    and b_to.month == expected_to_month
-                    and b_to.day == 1):
+                    and b_from == start_date.date()
+                    and b_to == end_date.date()):
                 return True
 
     if actual is None and not result:

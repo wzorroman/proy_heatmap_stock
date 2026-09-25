@@ -45,6 +45,30 @@ CLASS_MAP = {
 ETF_TICKERS = ('QQQ', 'SPY', 'VOO', 'VGT', 'SHY', 'IEI', 'IEF', 'TLT', 'SLV',
                'USO', 'XLE', 'XOP', 'UUP')
 
+# F4.5b: mapeo canónico de claves lógicas (espejo de la migración alembic 0006).
+#   logical_key  = clave F2.5 (VIX|DXY|TLT|US10Y|ORO|OIL)
+#   role         = primary (canónico) | fallback (respaldo del radar)
+MAPEO_LOGICAL = {
+    'TVC:VIX':      {'logical_key': 'VIX',   'role': 'primary',  'is_canonical': True,  'feed_delay_s': 0},
+    'CBOE:VX1!':    {'logical_key': 'VIX',   'role': 'fallback', 'is_canonical': False, 'feed_delay_s': 600},
+    'TVC:DXY':      {'logical_key': 'DXY',   'role': 'primary',  'is_canonical': True,  'feed_delay_s': 0},
+    'ICEUS:DX1!':   {'logical_key': 'DXY',   'role': 'fallback', 'is_canonical': False, 'feed_delay_s': 600},
+    'AMEX:UUP':     {'logical_key': 'DXY',   'role': 'fallback', 'is_canonical': False, 'feed_delay_s': 900},
+    'OANDA:XAUUSD': {'logical_key': 'ORO',   'role': 'primary',  'is_canonical': True,  'feed_delay_s': 0},
+    'SAXO:XAUUSD':  {'logical_key': 'ORO',   'role': 'fallback', 'is_canonical': False, 'feed_delay_s': 0},
+    'AMEX:USO':     {'logical_key': 'OIL',   'role': 'primary',  'is_canonical': True,  'feed_delay_s': 900},
+    'NYMEX:CL1!':   {'logical_key': 'OIL',   'role': 'fallback', 'is_canonical': False, 'feed_delay_s': 600},
+    'NASDAQ:TLT':   {'logical_key': 'TLT',   'role': 'primary',  'is_canonical': True,  'feed_delay_s': 900},
+    'CBOT:ZB1!':    {'logical_key': 'TLT',   'role': 'fallback', 'is_canonical': False, 'feed_delay_s': 600},
+    'TVC:US10Y':    {'logical_key': 'US10Y', 'role': 'primary',  'is_canonical': True,  'feed_delay_s': 0},
+}
+
+FEED_DELAY_CLASE = {
+    'equity': 900, 'etf': 900,
+    'future': 600,
+    'crypto': 0, 'forex': 0, 'commodity': 0, 'index': 0, 'yield': 0,
+}
+
 
 def classify_symbol(symbol):
     ex, tk = symbol.split(':', 1)
@@ -69,21 +93,30 @@ def radar_rows():
                 if not symbol:
                     continue
                 exchange, ticker = symbol.split(':', 1)
-                rows.append({
+                row = {
                     'symbol': symbol,
                     'ticker': ticker,
                     'exchange': exchange,
                     'asset_class': classify_symbol(symbol),
                     'source_discovered_by': 'radar_v4',
                     'source_category': categoria,
-                })
+                }
+                meta = MAPEO_LOGICAL.get(symbol)
+                row['logical_key'] = (meta or {}).get('logical_key')
+                row['role'] = (meta or {}).get('role')
+                row['is_canonical'] = bool((meta or {}).get('is_canonical'))
+                row['feed_delay_s'] = (meta or {}).get(
+                    'feed_delay_s',
+                    FEED_DELAY_CLASE.get(row['asset_class'], 0),
+                )
+                rows.append(row)
     return rows
 
 
 def get_faltantes(db, rows):
     symbols = [r['symbol'] for r in rows]
     result = db.execute_query(
-        "SELECT symbol FROM dim_asset WHERE is_active AND current_version"
+        "SELECT symbol FROM dim_asset WHERE is_active"
     )
     existentes = {row['symbol'] for row in result} if result else set()
     faltantes = [r for r in rows if r['symbol'] not in existentes]
@@ -141,11 +174,11 @@ def main():
                 INSERT INTO dim_asset (
                     symbol, ticker, exchange, asset_class,
                     source_discovered_by, source_category,
-                    is_active, valid_from, valid_to, current_version,
-                    created_at, updated_at
+                    logical_key, is_canonical, role, feed_delay_s,
+                    is_active, created_at, updated_at
                 ) VALUES (%s, %s, %s, %s, %s, %s,
-                          TRUE, CURRENT_TIMESTAMP, 'infinity', TRUE,
-                          CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                          %s, %s, %s, %s,
+                          TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 ON CONFLICT (symbol) DO NOTHING
             """
             n = 0
@@ -153,6 +186,8 @@ def main():
                 n += db.execute_batch(insert_query, [(
                     r['symbol'], r['ticker'], r['exchange'], r['asset_class'],
                     r['source_discovered_by'], r['source_category'],
+                    r.get('logical_key'), r.get('is_canonical'),
+                    r.get('role'), r.get('feed_delay_s'),
                 )])
             print(f"{n} altas nuevas realizadas en dim_asset")
     finally:

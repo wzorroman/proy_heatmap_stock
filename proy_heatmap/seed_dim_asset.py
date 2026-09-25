@@ -104,9 +104,6 @@ def load_csv_rows(csv_path):
                 'source_discovered_by': 'heatmap',
                 'source_category': None,
                 'is_active': _bool(r.get('is_active')),
-                'valid_from': r.get('valid_from'),
-                'valid_to': r.get('valid_to') or 'infinity',
-                'current_version': _bool(r.get('current_version')),
                 'created_at': r.get('created_at'),
                 'updated_at': r.get('updated_at'),
             })
@@ -143,7 +140,7 @@ def show_dry_run(csv_rows, radar_rows, csv_only):
     print("  share_class:", dict(share))
     excl = Counter(r['exchange'] for r in csv_rows)
     print("  exchanges:  ", dict(excl))
-    print(f"  con valid_from/created_at: {sum(1 for r in csv_rows if r['valid_from'] and r['created_at'])}")
+    print(f"  con created_at: {sum(1 for r in csv_rows if r['created_at'])}")
 
     if not csv_only:
         print(f"RADAR ({RADAR_DEFAULT}): {len(radar_rows)} símbolos")
@@ -204,9 +201,8 @@ def run_real(csv_rows, radar_rows, csv_only, skip_dim_time):
                 INSERT INTO dim_asset (
                     symbol, ticker, exchange, asset_class, share_class,
                     sector, company_name, source_discovered_by, source_category,
-                    is_active, valid_from, valid_to, current_version,
-                    created_at, updated_at
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    is_active, created_at, updated_at
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (symbol) DO UPDATE SET
                     ticker          = EXCLUDED.ticker,
                     exchange        = EXCLUDED.exchange,
@@ -218,8 +214,7 @@ def run_real(csv_rows, radar_rows, csv_only, skip_dim_time):
                 r['symbol'], r['ticker'], r['exchange'], r['asset_class'],
                 r['share_class'], r['sector'], r['company_name'],
                 r['source_discovered_by'], r['source_category'],
-                r['is_active'], r['valid_from'], r['valid_to'],
-                r['current_version'], r['created_at'], r['updated_at'],
+                r['is_active'], r['created_at'], r['updated_at'],
             ) for r in csv_rows]
             cur.executemany(csv_sql, csv_params)
             print(f"dim_asset CSV sembrada: {len(csv_params)} filas")

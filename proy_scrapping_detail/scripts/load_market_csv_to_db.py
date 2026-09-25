@@ -26,7 +26,7 @@ import logging
 import os
 import re
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 PARENT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if PARENT not in sys.path:
@@ -140,6 +140,54 @@ def data_range():
     return lo, hi
 
 
+def days_with_data(db, dias: int = 30) -> set:
+    """Días (YYYY-MM-DD, UTC) con filas en fact_market_series en los últimos N días."""
+    result = db.execute_query("""
+        SELECT to_char(date_trunc('day', timestamp_utc) AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS dia
+        FROM fact_market_series
+        WHERE timestamp_utc > CURRENT_TIMESTAMP - INTERVAL '%s days'
+        GROUP BY 1
+    """, (dias,))
+    return {r['dia'] for r in result or []}
+
+
+def days_with_csv_desde(fecha: datetime) -> set:
+    """Días (YYYY-MM-DD) con al menos una fila CSV en buffer activo/histórico >= fecha."""
+    dias: set = set()
+    for f in iter_csv_files():
+        with open(f, newline='', encoding='utf-8') as fh:
+            reader = csv.reader(fh)
+            next(reader, None)
+            for fields in reader:
+                if not fields or len(fields) != 12:
+                    continue
+                try:
+                    ts = int(fields[_TS_IDX])
+                except (ValueError, TypeError):
+                    continue
+                if ts >= int(fecha.timestamp()):
+                    dias.add(datetime.fromtimestamp(ts, timezone.utc).strftime('%Y-%m-%d'))
+    return dias
+
+
+def detectar_huecos(db) -> list:
+    """
+    Reconciliación CSV→BD (F3.5): días que existen en DATOS_LIVE pero no en BD.
+
+    Retorna lista de huecos {'inicio': datetime, 'fin': datetime} (cada hueco
+    es un día completo). Con BD caída 10 min, el job nocturno descubre el dia
+    con datos y lo rellena -> "tras reiniciar no queda hueco".
+    """
+    hace30 = datetime.now(timezone.utc) - timedelta(days=30)
+    con_bd = days_with_data(db, 30)
+    con_csv = days_with_csv_desde(hace30)
+    huecos = []
+    for dia in sorted(con_csv - con_bd):
+        inicio = datetime.fromisoformat(dia).replace(tzinfo=timezone.utc)
+        huecos.append({'inicio': inicio, 'fin': inicio + timedelta(days=1, microseconds=-1)})
+    return huecos
+
+
 def months_between(start: datetime, end: datetime):
     """Meses civiles [start, end] (datetime UTC primer de mes)."""
     m = start.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -190,35 +238,8 @@ def build_row(fields: list) -> dict:
     return row
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser(description='Backfill fact_market_series desde CSV.')
-    ap.add_argument('--fecha-inicio', help='Fecha inicio (YYYY-MM-DD o ISO UTC)')
-    ap.add_argument('--fecha-fin', help='Fecha fin (YYYY-MM-DD o ISO UTC)')
-    ap.add_argument('--dry-run', action='store_true', help='Cuenta sin insertar')
-    ap.add_argument('--batch-size', type=int, default=BATCH_SIZE)
-    ap.add_argument('-v', action='store_true', help='Log debug')
-    args = ap.parse_args()
-
-    logging.basicConfig(
-        level=logging.DEBUG if args.v else logging.INFO,
-        format='%(asctime)s %(levelname)-7s %(message)s',
-        handlers=[logging.StreamHandler()],
-    )
-
-    t0 = datetime.now(timezone.utc)
-
-    if args.fecha_inicio and args.fecha_fin:
-        inicio = parse_fecha(args.fecha_inicio)
-        fin = parse_fecha(args.fecha_fin)
-    else:
-        lo, hi = data_range()
-        if not lo:
-            logger.error("No se encontraron filas CSV en DATOS_LIVE.")
-            return 2
-        inicio = datetime.fromtimestamp(lo, timezone.utc).replace(microsecond=0)
-        fin = datetime.fromtimestamp(hi, timezone.utc).replace(microsecond=0)
-        logger.info(f"Rango detectado desde CSV: {inicio.isoformat()} → {fin.isoformat()}")
-
+def run_ingesta(inicio: datetime, fin: datetime, args) -> int:
+    """Ejecuta el vuelco CSV→BD del rango [inicio, fin]. Retorna código de salida."""
     t_inicio = int(inicio.timestamp())
     t_fin = int(fin.timestamp())
 
@@ -232,6 +253,7 @@ def main() -> int:
         logger.error("No se pudo conectar a BD.")
         return 2
 
+    t0 = datetime.now(timezone.utc)
     total_leidas = 0
     filas_en_rango = 0
     total_convertidas = 0
@@ -293,7 +315,7 @@ def main() -> int:
         failed_total = failed_simbolo + failed_fila
 
         logger.info("=" * 70)
-        logger.info(f"RESUMEN backfill  [{inicio.isoformat()} → {fin.isoformat()}]")
+        logger.info(f"RESUMEN ingesta  [{inicio.isoformat()} → {fin.isoformat()}]")
         logger.info(f"  Filas leídas en archivos     : {total_leidas}")
         logger.info(f"  Filas dentro del rango       : {filas_en_rango}")
         logger.info(f"  Filas a insertar (upsert)    : {total_convertidas}")
@@ -306,15 +328,16 @@ def main() -> int:
 
         if not args.dry_run:
             log_sync_run(db, {
-                'script_name': SCRIPT_NAME,
+                'script_name': 'backfill_market_csv' if not args.reconcile else 'reconcile_market_csv',
                 'run_start': t0,
                 'records_fetched': filas_en_rango,
                 'records_upserted': total_convertidas,
                 'records_failed': failed_total,
                 'status': 'SUCCESS',
                 'execution_mode': 'manual',
+                'source_params': {'rango_utc': [inicio.isoformat(), fin.isoformat()]},
             })
-            logger.info(f"Auditoría registrada: {SCRIPT_NAME} - SUCCESS "
+            logger.info(f"Auditoría registrada: SUCCESS "
                         f"(fetched={filas_en_rango}, upserted={total_convertidas}, "
                         f"failed={failed_total})")
         else:
@@ -324,11 +347,11 @@ def main() -> int:
         return 0
 
     except Exception as e:
-        logger.exception(f"Error durante el backfill: {e}")
+        logger.exception(f"Error durante la ingesta: {e}")
         if not args.dry_run:
             try:
                 log_sync_run(db, {
-                    'script_name': SCRIPT_NAME,
+                    'script_name': 'backfill_market_csv' if not args.reconcile else 'reconcile_market_csv',
                     'run_start': t0,
                     'records_fetched': filas_en_rango,
                     'records_upserted': 0,
@@ -342,6 +365,60 @@ def main() -> int:
         return 1
     finally:
         db.disconnect()
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description='Backfill fact_market_series desde CSV.')
+    ap.add_argument('--fecha-inicio', help='Fecha inicio (YYYY-MM-DD o ISO UTC)')
+    ap.add_argument('--fecha-fin', help='Fecha fin (YYYY-MM-DD o ISO UTC)')
+    ap.add_argument('--dry-run', action='store_true', help='Cuenta sin insertar')
+    ap.add_argument('--batch-size', type=int, default=BATCH_SIZE)
+    ap.add_argument('--reconcile', action='store_true',
+                    help='F3.5: rellena los huecos CSV→BD (días presentes en DATOS_LIVE ausentes en BD)')
+    ap.add_argument('-v', action='store_true', help='Log debug')
+    args = ap.parse_args()
+
+    logging.basicConfig(
+        level=logging.DEBUG if args.v else logging.INFO,
+        format='%(asctime)s %(levelname)-7s %(message)s',
+        handlers=[logging.StreamHandler()],
+    )
+
+    t0 = datetime.now(timezone.utc)
+
+    if args.fecha_inicio and args.fecha_fin:
+        inicio = parse_fecha(args.fecha_inicio)
+        fin = parse_fecha(args.fecha_fin)
+    elif args.reconcile:
+        db_probe = PostgreSQLConnector(config.PG_HOST, config.PG_PORT,
+                                       config.PG_DATABASE, config.PG_USER, config.PG_PASSWORD)
+        if not db_probe.connect():
+            logger.error("No se pudo conectar a BD para reconciliar.")
+            return 2
+        try:
+            huecos = detectar_huecos(db_probe)
+        finally:
+            db_probe.disconnect()
+        if not huecos:
+            logger.info("--reconcile: sin huecos (todos los días CSV ya están en BD).")
+            return 0
+        logger.warning(f"--reconcile: {len(huecos)} día(s) a rellenar: "
+                       f"{[h['inicio'].date().isoformat() for h in huecos]}")
+        # Rellenamos día a día (cada hueco es un día completo)
+        for h in huecos:
+            rc = run_ingesta(h['inicio'], h['fin'], args)
+            if rc != 0:
+                return rc
+        return 0
+    else:
+        lo, hi = data_range()
+        if not lo:
+            logger.error("No se encontraron filas CSV en DATOS_LIVE.")
+            return 2
+        inicio = datetime.fromtimestamp(lo, timezone.utc).replace(microsecond=0)
+        fin = datetime.fromtimestamp(hi, timezone.utc).replace(microsecond=0)
+        logger.info(f"Rango detectado desde CSV: {inicio.isoformat()} → {fin.isoformat()}")
+    return run_ingesta(inicio, fin, args)
 
 
 if __name__ == '__main__':

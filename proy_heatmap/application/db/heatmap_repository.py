@@ -28,9 +28,8 @@ def get_heatmap_last_hour(conn: PostgreSQLConnector) -> List[Dict]:
                 h.timestamp_utc
             FROM fact_heatmap_snapshot h
             JOIN dim_asset a ON h.asset_id = a.asset_id
-            WHERE h.timestamp_utc >= NOW() - INTERVAL '1 hour'
+            WHERE h.timestamp_utc >= (SELECT MAX(timestamp_utc) - INTERVAL '15 minutes' FROM fact_heatmap_snapshot)
               AND a.is_active = TRUE
-              AND a.current_version = TRUE
               AND a.asset_class IN ('equity', 'etf')
             ORDER BY a.symbol, h.timestamp_utc DESC
         ) latest
@@ -45,7 +44,6 @@ def get_sectors(conn: PostgreSQLConnector) -> List[str]:
         FROM dim_asset
         WHERE sector IS NOT NULL
           AND is_active = TRUE
-          AND current_version = TRUE
           AND asset_class IN ('equity', 'etf')
         ORDER BY sector;
     """
@@ -67,9 +65,8 @@ def get_heatmap_stats(conn: PostgreSQLConnector) -> Dict:
                 h.price_heatmap, h.daily_change_pct
             FROM fact_heatmap_snapshot h
             JOIN dim_asset a ON h.asset_id = a.asset_id
-            WHERE h.timestamp_utc >= NOW() - INTERVAL '1 hour'
+            WHERE h.timestamp_utc >= (SELECT MAX(timestamp_utc) - INTERVAL '15 minutes' FROM fact_heatmap_snapshot)
               AND a.is_active = TRUE
-              AND a.current_version = TRUE
               AND a.asset_class IN ('equity', 'etf')
             ORDER BY a.symbol, h.timestamp_utc DESC
         ) latest;
@@ -78,7 +75,7 @@ def get_heatmap_stats(conn: PostgreSQLConnector) -> Dict:
     return result[0] if result else {}
 
 
-def get_price_evolution(conn: PostgreSQLConnector, lookback_hours: int = 1, max_snapshots: int = 6) -> List[Dict]:
+def get_price_evolution(conn: PostgreSQLConnector, lookback_hours: int = 24, max_snapshots: int = 6) -> List[Dict]:
     query = """
         WITH ranked AS (
             SELECT
@@ -92,7 +89,6 @@ def get_price_evolution(conn: PostgreSQLConnector, lookback_hours: int = 1, max_
             JOIN dim_asset a ON h.asset_id = a.asset_id
             WHERE h.timestamp_utc >= NOW() - make_interval(hours => %s)
               AND a.is_active = TRUE
-              AND a.current_version = TRUE
               AND a.asset_class IN ('equity', 'etf')
         )
         SELECT symbol, ticker, sector, company_name,

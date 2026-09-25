@@ -50,7 +50,9 @@ def process_calendar_batch(eventos_raw: list) -> int:
         })
 
         # 5. Actualizar checkpoint BD
-        max_event_id = max(safe_int(e.get('id', 0)) for e in eventos_raw) if eventos_raw else 0
+        ids = [safe_int(e.get('id', 0)) for e in eventos_raw]
+        ids = [i for i in ids if i is not None]
+        max_event_id = max(ids) if ids else 0
         update_checkpoint(db, {
             'script_name': config.SCRIPT_NAME_CALENDARIO,
             'last_timestamp': run_start,
@@ -58,10 +60,6 @@ def process_calendar_batch(eventos_raw: list) -> int:
             'records_processed': inserted,
             'status': 'ACTIVE'
         })
-
-        # 6. Mantener checkpoint JSON local (fallback)
-        from calendario_tradingview_live_v5 import guardar_checkpoint
-        guardar_checkpoint(max_event_id, inserted, len(eventos_raw))
 
         return inserted
 

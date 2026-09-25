@@ -591,7 +591,9 @@ CAMPOS = ",".join([BASE, _bloque("5"), _bloque("15")])
 
 **Decisión:** D7 → Tipo 1 (recomendado). Quitar `valid_from/valid_to/current_version` o dejarlos con `UNIQUE (symbol) WHERE current_version`.
 
-**Hecho cuando:** el esquema es coherente con D7; `dim_asset_symbol_key` documentado.
+**Hecho cuando:** el esquema es coherente con D7; `dim_asset_symbol_key` documentado.
+
+**✅ Cumplida (2026-09-23):** migración Alembic `0006` aplicada en vivo — `dim_asset` a Tipo 1 (drogadas `valid_from`/`valid_to`/`current_version`) + mapeo canónico F4.5b (`logical_key`/`is_canonical`/`role`/`feed_delay_s`, alta de `TVC:DXY`, índice único parcial 1-canónico-por-clave). BD en `0006 (head)`, `dim_asset`=1.669. Ver changelog v2.3.8.
 
 ### **F4.6 · Eventos: upsert condicional (M-DAT-08)**
 

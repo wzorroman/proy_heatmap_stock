@@ -1,0 +1,672 @@
+{
+  "A1": {
+    "columns": [
+      "hora_et",
+      "ticks",
+      "closes_distintos"
+    ],
+    "count": 24,
+    "sample": [
+      [
+        "2026-09-17 00:00:00",
+        20,
+        1
+      ],
+      [
+        "2026-09-17 01:00:00",
+        20,
+        1
+      ],
+      [
+        "2026-09-17 02:00:00",
+        20,
+        1
+      ],
+      [
+        "2026-09-17 03:00:00",
+        20,
+        1
+      ],
+      [
+        "2026-09-17 04:00:00",
+        20,
+        1
+      ],
+      [
+        "2026-09-17 05:00:00",
+        20,
+        1
+      ],
+      [
+        "2026-09-17 06:00:00",
+        20,
+        1
+      ],
+      [
+        "2026-09-17 07:00:00",
+        20,
+        1
+      ]
+    ]
+  },
+  "A2": {
+    "columns": [
+      "ts_et",
+      "volume",
+      "delta"
+    ],
+    "count": 280,
+    "sample": [
+      [
+        "2026-09-17 08:00:50",
+        "96561398.00000000",
+        null
+      ],
+      [
+        "2026-09-17 08:03:48",
+        "96561398.00000000",
+        "0E-8"
+      ],
+      [
+        "2026-09-17 08:06:52",
+        "96561398.00000000",
+        "0E-8"
+      ],
+      [
+        "2026-09-17 08:09:50",
+        "96561398.00000000",
+        "0E-8"
+      ],
+      [
+        "2026-09-17 08:12:49",
+        "96561398.00000000",
+        "0E-8"
+      ],
+      [
+        "2026-09-17 08:15:55",
+        "96561398.00000000",
+        "0E-8"
+      ],
+      [
+        "2026-09-17 08:18:52",
+        "96561398.00000000",
+        "0E-8"
+      ],
+      [
+        "2026-09-17 08:21:49",
+        "96561398.00000000",
+        "0E-8"
+      ]
+    ]
+  },
+  "A3": {
+    "columns": [
+      "importance",
+      "n",
+      "ejemplos"
+    ],
+    "count": 3,
+    "sample": [
+      [
+        -1,
+        150,
+        [
+          "Nonfarm Payrolls Private",
+          "Nonfarm Productivity QoQ Final",
+          "U-6 Unemployment Rate"
+        ]
+      ],
+      [
+        0,
+        50,
+        [
+          "CPI",
+          "CPI s.a"
+        ]
+      ],
+      [
+        1,
+        18,
+        [
+          "Fed Interest Rate Decision",
+          "Non Farm Payrolls",
+          "Unemployment Rate"
+        ]
+      ]
+    ]
+  },
+  "A4": {
+    "columns": [
+      "dia",
+      "eventos",
+      "sin_captured_at"
+    ],
+    "count": 1,
+    "sample": [
+      [
+        "2026-09-18 00:00:00-05:00",
+        579,
+        0
+      ]
+    ]
+  },
+  "A6": {
+    "columns": [
+      "spy",
+      "desfase"
+    ],
+    "count": 20,
+    "sample": [
+      [
+        "2026-09-17 09:00:07-05:00",
+        "0:02:03"
+      ],
+      [
+        "2026-09-17 09:03:03-05:00",
+        "0:02:05"
+      ],
+      [
+        "2026-09-17 09:06:03-05:00",
+        "0:01:59"
+      ],
+      [
+        "2026-09-17 09:09:03-05:00",
+        "0:01:57"
+      ],
+      [
+        "2026-09-17 09:12:03-05:00",
+        "0:02:01"
+      ],
+      [
+        "2026-09-17 09:15:03-05:00",
+        "0:02:00"
+      ],
+      [
+        "2026-09-17 09:18:03-05:00",
+        "0:02:01"
+      ],
+      [
+        "2026-09-17 09:21:02-05:00",
+        "0:01:59"
+      ]
+    ]
+  },
+  "A7": {
+    "columns": [
+      "p50_p90_p99",
+      "gap_max",
+      "huecos_mayores_4_min"
+    ],
+    "count": 1,
+    "sample": [
+      [
+        [
+          "0:03:00",
+          "0:03:01",
+          "0:03:02"
+        ],
+        "0:03:44",
+        0
+      ]
+    ]
+  },
+  "A8": {
+    "columns": [
+      "symbol",
+      "n",
+      "distintos",
+      "enteros",
+      "nulos"
+    ],
+    "count": 4,
+    "sample": [
+      [
+        "CBOE:VX1!",
+        1312,
+        91,
+        119,
+        0
+      ],
+      [
+        "TVC:US02Y",
+        1312,
+        85,
+        0,
+        0
+      ],
+      [
+        "TVC:US10Y",
+        1312,
+        58,
+        110,
+        0
+      ],
+      [
+        "TVC:VIX",
+        1312,
+        204,
+        17,
+        0
+      ]
+    ]
+  },
+  "A9": {
+    "columns": [
+      "importance",
+      "total",
+      "con_sorpresa"
+    ],
+    "count": 3,
+    "sample": [
+      [
+        -1,
+        392,
+        125
+      ],
+      [
+        0,
+        142,
+        89
+      ],
+      [
+        1,
+        45,
+        39
+      ]
+    ]
+  },
+  "A10": {
+    "columns": [
+      "hora_utc",
+      "ticks",
+      "closes_distintos"
+    ],
+    "count": 44,
+    "sample": [
+      [
+        "2026-09-17 00:00:00",
+        20,
+        1
+      ],
+      [
+        "2026-09-17 01:00:00",
+        20,
+        1
+      ],
+      [
+        "2026-09-17 02:00:00",
+        20,
+        1
+      ],
+      [
+        "2026-09-17 03:00:00",
+        20,
+        1
+      ],
+      [
+        "2026-09-17 04:00:00",
+        20,
+        1
+      ],
+      [
+        "2026-09-17 05:00:00",
+        20,
+        1
+      ],
+      [
+        "2026-09-17 06:00:00",
+        20,
+        1
+      ],
+      [
+        "2026-09-17 07:00:00",
+        20,
+        1
+      ]
+    ]
+  },
+  "A11": {
+    "columns": [
+      "symbol",
+      "n",
+      "pct_close_nulo",
+      "pct_rsi_nulo",
+      "pct_volumen_nulo"
+    ],
+    "count": 2,
+    "sample": [
+      [
+        "TVC:US02Y",
+        1312,
+        "0.00",
+        "100.00",
+        "100.00"
+      ],
+      [
+        "TVC:US10Y",
+        1312,
+        "0.00",
+        "100.00",
+        "100.00"
+      ]
+    ]
+  },
+  "A12": {
+    "columns": [
+      "exchange",
+      "share_class",
+      "n"
+    ],
+    "count": 11,
+    "sample": [
+      [
+        "OTC",
+        "common",
+        248
+      ],
+      [
+        "NYSE",
+        "common",
+        245
+      ],
+      [
+        "OTC",
+        "",
+        199
+      ],
+      [
+        "NASDAQ",
+        "common",
+        112
+      ],
+      [
+        "NYSE",
+        "preferred",
+        101
+      ],
+      [
+        "NYSE",
+        "",
+        58
+      ],
+      [
+        "OTC",
+        "preferred",
+        14
+      ],
+      [
+        "NASDAQ",
+        "",
+        10
+      ]
+    ]
+  },
+  "A13": {
+    "columns": [
+      "tabla",
+      "indice",
+      "idx_scan",
+      "tamano"
+    ],
+    "count": 30,
+    "sample": [
+      [
+        "fact_market_series_2026_09",
+        "fact_market_series_2026_09_pkey",
+        0,
+        "21 MB"
+      ],
+      [
+        "fact_market_series_2026_09",
+        "fact_market_series_2026_09_close_idx",
+        0,
+        "21 MB"
+      ],
+      [
+        "fact_market_series_2026_09",
+        "fact_market_series_2026_09_rsi_idx",
+        0,
+        "20 MB"
+      ],
+      [
+        "fact_market_series_2026_08",
+        "fact_market_series_2026_08_close_idx",
+        0,
+        "14 MB"
+      ],
+      [
+        "fact_market_series_2026_08",
+        "fact_market_series_2026_08_pkey",
+        0,
+        "14 MB"
+      ],
+      [
+        "fact_market_series_2026_08",
+        "fact_market_series_2026_08_rsi_idx",
+        0,
+        "13 MB"
+      ],
+      [
+        "fact_market_series_2026_07",
+        "fact_market_series_2026_07_close_idx",
+        0,
+        "10024 kB"
+      ],
+      [
+        "fact_market_series_2026_04",
+        "fact_market_series_2026_04_close_idx",
+        0,
+        "9704 kB"
+      ]
+    ]
+  },
+  "A14": {
+    "columns": [
+      "source_discovered_by",
+      "n",
+      "sin_logo"
+    ],
+    "count": 2,
+    "sample": [
+      [
+        "radar_v4",
+        45,
+        45
+      ],
+      [
+        "heatmap",
+        1038,
+        1038
+      ]
+    ]
+  },
+  "A15": {
+    "columns": [
+      "script_name",
+      "status",
+      "corridas",
+      "primera",
+      "ultima"
+    ],
+    "count": 6,
+    "sample": [
+      [
+        "backfill_calendar_csv",
+        "SUCCESS",
+        1,
+        "2026-09-18 20:15:28.768106-05:00",
+        "2026-09-18 20:15:28.768106-05:00"
+      ],
+      [
+        "backfill_market_csv",
+        "FAILED",
+        3,
+        "2026-09-18 15:41:42.706530-05:00",
+        "2026-09-18 15:42:41.765278-05:00"
+      ],
+      [
+        "backfill_market_csv",
+        "SUCCESS",
+        2,
+        "2026-09-18 15:40:24.077332-05:00",
+        "2026-09-18 15:46:49.852894-05:00"
+      ],
+      [
+        "calendario",
+        "SUCCESS",
+        1,
+        "2026-09-13 23:40:29.493281-05:00",
+        "2026-09-13 23:40:29.493281-05:00"
+      ],
+      [
+        "radar_v4",
+        "SUCCESS",
+        2,
+        "2026-09-18 13:23:42.195468-05:00",
+        "2026-09-18 14:20:54.781587-05:00"
+      ],
+      [
+        "scrapper_heatmap_v1",
+        "SUCCESS",
+        3,
+        "2026-09-13 12:59:26.852978-05:00",
+        "2026-09-18 14:23:30.080939-05:00"
+      ]
+    ]
+  },
+  "A16": {
+    "columns": [
+      "indexname",
+      "indexdef"
+    ],
+    "count": 6,
+    "sample": [
+      [
+        "dim_asset_pkey",
+        "CREATE UNIQUE INDEX dim_asset_pkey ON public.dim_asset USING btree (asset_id)"
+      ],
+      [
+        "dim_asset_symbol_key",
+        "CREATE UNIQUE INDEX dim_asset_symbol_key ON public.dim_asset USING btree (symbol)"
+      ],
+      [
+        "idx_dim_asset_active",
+        "CREATE INDEX idx_dim_asset_active ON public.dim_asset USING btree (is_active, current_version) WHERE (is_active AND current_version)"
+      ],
+      [
+        "idx_dim_asset_class",
+        "CREATE INDEX idx_dim_asset_class ON public.dim_asset USING btree (asset_class) WHERE (is_active AND current_version)"
+      ],
+      [
+        "idx_dim_asset_slug",
+        "CREATE INDEX idx_dim_asset_slug ON public.dim_asset USING btree (slug)"
+      ],
+      [
+        "idx_dim_asset_symbol",
+        "CREATE INDEX idx_dim_asset_symbol ON public.dim_asset USING btree (symbol)"
+      ]
+    ]
+  },
+  "A5": {
+    "UTC": {
+      "columns": [
+        "tabla",
+        "particion",
+        "limites"
+      ],
+      "count": 84,
+      "sample": [
+        [
+          "fact_heatmap_snapshot",
+          "fact_heatmap_snapshot_2026_09",
+          "FOR VALUES FROM ('2026-09-01 05:00:00+00') TO ('2026-10-01 05:00:00+00')"
+        ],
+        [
+          "fact_heatmap_snapshot",
+          "fact_heatmap_snapshot_2026_10",
+          "FOR VALUES FROM ('2026-10-01 05:00:00+00') TO ('2026-11-01 05:00:00+00')"
+        ],
+        [
+          "fact_heatmap_snapshot",
+          "fact_heatmap_snapshot_2026_11",
+          "FOR VALUES FROM ('2026-11-01 05:00:00+00') TO ('2026-12-01 05:00:00+00')"
+        ],
+        [
+          "fact_heatmap_snapshot",
+          "fact_heatmap_snapshot_2026_12",
+          "FOR VALUES FROM ('2026-12-01 05:00:00+00') TO ('2027-01-01 05:00:00+00')"
+        ],
+        [
+          "fact_heatmap_snapshot_pkey",
+          "fact_heatmap_snapshot_2026_09_pkey",
+          null
+        ],
+        [
+          "fact_heatmap_snapshot_pkey",
+          "fact_heatmap_snapshot_2026_10_pkey",
+          null
+        ],
+        [
+          "fact_heatmap_snapshot_pkey",
+          "fact_heatmap_snapshot_2026_11_pkey",
+          null
+        ],
+        [
+          "fact_heatmap_snapshot_pkey",
+          "fact_heatmap_snapshot_2026_12_pkey",
+          null
+        ]
+      ]
+    },
+    "America/Lima": {
+      "columns": [
+        "tabla",
+        "particion",
+        "limites"
+      ],
+      "count": 84,
+      "sample": [
+        [
+          "fact_heatmap_snapshot",
+          "fact_heatmap_snapshot_2026_09",
+          "FOR VALUES FROM ('2026-09-01 00:00:00-05') TO ('2026-10-01 00:00:00-05')"
+        ],
+        [
+          "fact_heatmap_snapshot",
+          "fact_heatmap_snapshot_2026_10",
+          "FOR VALUES FROM ('2026-10-01 00:00:00-05') TO ('2026-11-01 00:00:00-05')"
+        ],
+        [
+          "fact_heatmap_snapshot",
+          "fact_heatmap_snapshot_2026_11",
+          "FOR VALUES FROM ('2026-11-01 00:00:00-05') TO ('2026-12-01 00:00:00-05')"
+        ],
+        [
+          "fact_heatmap_snapshot",
+          "fact_heatmap_snapshot_2026_12",
+          "FOR VALUES FROM ('2026-12-01 00:00:00-05') TO ('2027-01-01 00:00:00-05')"
+        ],
+        [
+          "fact_heatmap_snapshot_pkey",
+          "fact_heatmap_snapshot_2026_09_pkey",
+          null
+        ],
+        [
+          "fact_heatmap_snapshot_pkey",
+          "fact_heatmap_snapshot_2026_10_pkey",
+          null
+        ],
+        [
+          "fact_heatmap_snapshot_pkey",
+          "fact_heatmap_snapshot_2026_11_pkey",
+          null
+        ],
+        [
+          "fact_heatmap_snapshot_pkey",
+          "fact_heatmap_snapshot_2026_12_pkey",
+          null
+        ]
+      ]
+    }
+  }
+}

@@ -84,7 +84,7 @@ def _build_asset_label(row: Dict) -> str:
     return label
 
 
-def fetch_price_evolution(lookback_hours: int = 1, max_snapshots: int = 6) -> List[Dict]:
+def fetch_price_evolution(lookback_hours: int = 24, max_snapshots: int = 6) -> List[Dict]:
     db = _get_connection()
     try:
         rows = get_price_evolution(db, lookback_hours, max_snapshots)
@@ -126,7 +126,7 @@ def fetch_price_evolution(lookback_hours: int = 1, max_snapshots: int = 6) -> Li
             'mcap': _format_market_cap(base['market_cap']),
         }
         for snap in snapshots:
-            label = snap['timestamp_utc'].strftime('%H:%M')
+            label = snap['timestamp_utc'].strftime('%m-%d %H:%M')
             row_data[label] = snap['price_heatmap']
         result.append(row_data)
     return result

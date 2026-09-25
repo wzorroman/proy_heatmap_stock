@@ -748,9 +748,11 @@ CREATE TABLE fact_market_indicator_tf (
 
 **Cambio:** D7 → Tipo 1. Quitar `valid_from/valid_to/current_version` o dejar `UNIQUE (symbol) WHERE current_version`.
 
-**Hecho cuando:** esquema coherente con D7.
+**Hecho cuando:** esquema coherente con D7.
 
-### **F4.5b · `dim_asset`: logical_key + resolución SCD2 (NUEVO)**
+**✅ Verificado (2026-09-23, changelog v2.3.8):** migración Alembic `0006` aplicada a `heatmap_stock` (BD en `0006 (head)`). `dim_asset` pasa a Tipo 1: se dropean `valid_from`, `valid_to`, `current_version` (E-BD-04); funciones/vistas/índices reconstruidos sin `current_version`; `idx_dim_asset_symbol` eliminado. Ver detalle en la versión v2.3 del roadmap.
+
+### **F4.5b · `dim_asset`: logical_key + resolución SCD2 (NUEVO)**
 
 **Cierra:** E-BD-04, E-RAD-06, I4, M-DAT-06.
 
@@ -765,7 +767,9 @@ CREATE TABLE fact_market_indicator_tf (
 - Eliminar `idx_dim_asset_symbol` (duplicado del `dim_asset_symbol_key`).
 - Documentar en `M-DOC-01` la semántica de cada columna nueva.
 
-**Hecho cuando:** `dim_asset` tiene todas las columnas del mapeo canónico y solo un índice único sobre `symbol`.
+**Hecho cuando:** `dim_asset` tiene todas las columnas del mapeo canónico y solo un índice único sobre `symbol`.
+
+**✅ Verificado (2026-09-23, changelog v2.3.8):** migración Alembic `0006` consolida `logical_key`/`is_canonical`/`role`/`feed_delay_s`, mapeo canónico de las 6 claves F2.5 con alta de `TVC:DXY`, índice único parcial `uq_dim_asset_canonical_logical_key` (1 canónico por clave). `dim_asset`=1.669, secuencia 4.701, `feed_delay_s` sin NULL. Ver detalle en la versión v2.3 del roadmap.
 
 ### **F4.6 · Eventos: upsert condicional**
 

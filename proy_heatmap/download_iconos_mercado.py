@@ -245,7 +245,7 @@ def main() -> int:
     cur = conn.cursor()
     cur.execute(
         "SELECT symbol, COALESCE(url_logo,'') FROM dim_asset "
-        "WHERE is_active AND current_version ORDER BY asset_class, symbol"
+        "WHERE is_active ORDER BY asset_class, symbol"
     )
     rows = [(r[0], r[1] or "") for r in cur.fetchall()]
     symbols = [r[0] for r in rows]
@@ -297,7 +297,7 @@ def main() -> int:
     cur = conn.cursor()
     cur.execute(
         "SELECT symbol, url_logo FROM dim_asset "
-        "WHERE is_active AND current_version AND url_logo IS NOT NULL AND url_logo <> ''"
+        "WHERE is_active AND url_logo IS NOT NULL AND url_logo <> ''"
     )
     targets = cur.fetchall()
     conn.close()
