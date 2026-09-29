@@ -1,25 +1,29 @@
 #!/bin/bash
 
-# run_scraper_tradingview.sh - v3.1.0
+# run_scraper_tradingview.sh - v3.1.1
 # Script para ejecutar el scraper de TradingView V5
 # Cambios: apunta a scraper_live_tradingview_v5.py, verificación BD, seed de dim_asset
+# v3.1.1: raíz de datos vía FILES_OUTPUT_SCRAPPING (mismo fallback que config.py)
 
 # ============================================
 # CONFIGURACIÓN INICIAL Y CARGA DE ENTORNO
 # ============================================
 
-# Auto-detectar PROJECT_DIR (directorio donde está este script)
+# Auto-detectar el directorio donde está este script
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="${PROJECT_DIR:-$SCRIPT_DIR}"
 
-ENV_FILE="./.env"
-
-# Cargar variables del archivo .env si existe
+# Cargar el .env del propio proyecto (no "./.env", relativo al CWD)
+ENV_FILE="$SCRIPT_DIR/.env"
 if [ -f "$ENV_FILE" ]; then
     set -a
     source "$ENV_FILE"
     set +a
 fi
+
+# PROJECT_DIR se reafirma DESPUÉS del .env a propósito: el .env de este repo
+# trae PROJECT_DIR apuntando al repo padre, que no contiene ni el script ni el
+# venv (check_directories abortaba ahí). Override explícito: PROJECT_DIR_OVERRIDE.
+PROJECT_DIR="${PROJECT_DIR_OVERRIDE:-$SCRIPT_DIR}"
 
 SERVER_ID="${SERVER_ID:-WZ-PC}"
 
@@ -30,11 +34,22 @@ SERVER_ID="${SERVER_ID:-WZ-PC}"
 SCRAPER_SCRIPT="$PROJECT_DIR/scraper_live_tradingview_v5.py"
 SEED_SCRIPT="$PROJECT_DIR/seed_symbols.py"
 VENV_PYTHON="$PROJECT_DIR/venv/bin/python3"
-ENV_FILE="$PROJECT_DIR/.env"
 LOG_DIR="$PROJECT_DIR/logs_ejecucion"
 EXEC_LOG="$LOG_DIR/scraper_$(date +%Y%m%d_%H%M%S).log"
 
 mkdir -p "$LOG_DIR"
+
+# ============================================
+# RUTAS DE DATOS
+# ============================================
+
+# Raíz de las series del radar. Misma fuente que scraper_live_tradingview_v5.py:
+# env var FILES_OUTPUT_SCRAPPING y, si falta, dentro de la carpeta del proyecto.
+init_rutas() {
+    DATOS_DIR="${FILES_OUTPUT_SCRAPPING:-$PROJECT_DIR/DATOS_LIVE}"
+}
+
+init_rutas
 
 # ============================================
 # FUNCIONES
@@ -86,6 +101,8 @@ load_env_vars() {
         set -a
         source "$ENV_FILE"
         set +a
+        # El .env puede traer FILES_OUTPUT_SCRAPPING: recalcular la raíz.
+        init_rutas
     fi
 }
 
@@ -127,7 +144,7 @@ run_seed_symbols() {
 }
 
 check_directorios_datos() {
-    local DATOS_DIR="$PROJECT_DIR/DATOS_LIVE"
+    log "📁 Raíz de datos: $DATOS_DIR"
 
     # Verificar que existen los directorios críticos
     local DIRS_CRITICOS=(
@@ -178,8 +195,6 @@ run_scraper() {
 }
 
 check_resultados() {
-    local DATOS_DIR="$PROJECT_DIR/DATOS_LIVE"
-
     log "📊 Verificando archivos generados..."
 
     local ARCHIVOS_CRITICOS=(
@@ -205,8 +220,9 @@ check_resultados() {
 
     log "   📈 Archivos críticos OK: $OK_COUNT/3"
 
-    local TOTAL_CSVS=$(find "$DATOS_DIR" -name "*.csv" -not -path "*/calendario_economico/*" 2>/dev/null | wc -l)
-    log "   📊 Total archivos CSV (excluyendo calendario): $TOTAL_CSVS"
+    # `heatmap/` (universo del heatmap) y `calendario_economico/` no son series del radar.
+    local TOTAL_CSVS=$(find "$DATOS_DIR" -name "*.csv" -not -path "*/calendario_economico/*" -not -path "*/heatmap/*" 2>/dev/null | wc -l)
+    log "   📊 Total archivos CSV (series del radar): $TOTAL_CSVS"
 }
 
 cleanup_old_logs() {

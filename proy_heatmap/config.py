@@ -1,15 +1,37 @@
 import os
 import pytz
+from pathlib import Path
 from dotenv import load_dotenv
 
-# Cargar variables del archivo .env
-load_dotenv('.env')
+# Cargar variables del archivo .env (junto al script, no al CWD)
+PROJECT_PATH = Path(__file__).resolve().parent
+load_dotenv(PROJECT_PATH / '.env')
 
 # =============================================================================
 # VERSIONES Y APLICACIÓN
 # =============================================================================
 VERSION = "1.0.2"
 TIMEZONE = pytz.timezone("America/Lima")
+
+# =============================================================================
+# CONFIGURACIÓN DE RUTAS DE SALIDA
+# =============================================================================
+# Mismas variables que proy_scrapping_detail/config.py: única fuente de verdad
+# para el ecosistema. Sin valor en entorno -> dentro de la carpeta del proyecto.
+
+
+def _ruta_salida(var: str, defecto: str) -> Path:
+    """Rutas de salida: variable de entorno o, si falta, dentro del proyecto."""
+    valor = (os.getenv(var) or "").strip()
+    if not valor:
+        return PROJECT_PATH / defecto
+    return Path(valor).expanduser()
+
+
+# Raices de escritura del radar (FILES_OUTPUT_SCRAPPING) y del calendario
+# (FILES_OUTPUT_CALENDAR), compartidas con proy_scrapping_detail.
+FILES_OUTPUT_SCRAPPING = _ruta_salida('FILES_OUTPUT_SCRAPPING', 'DATOS_LIVE')
+FILES_OUTPUT_CALENDAR = _ruta_salida('FILES_OUTPUT_CALENDAR', 'DATOS_LIVE_CALENDARIO')
 
 # =============================================================================
 # CONFIGURACIÓN DE LOGGING

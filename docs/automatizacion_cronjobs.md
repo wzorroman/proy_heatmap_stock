@@ -232,6 +232,25 @@ autónoma 24/5:
 */5 0-16 * * 5    cd <BASE>/proy_scrapping_detail && set -a && . ./.env && set +a && ./venv/bin/python monitor_alertas.py
 ```
 
+**Instalación realizada**
+
+El bloque anterior fue instalado en el crontab del usuario `appuser` el **2026-09-28**. Se añadieron las rutas absolutas con `<BASE>` = `/opt/proy_heatmap_stock` y se dejó la entrada B comentada (pendiente de implementar `--at-close`).
+
+Comandos usados para la instalación y verificación:
+
+```bash
+# Instalar crontab desde archivo temporal (ejecutado como root)
+su - appuser -c "crontab /tmp/heatmap_crontab.txt"
+
+# Verificar crontab instalado
+su - appuser -c "crontab -l"
+```
+
+Notas:
+- Asegúrate de que los launchers (`run_*.sh`) son ejecutables y pertenecen a `appuser`.
+- Revisa los logs iniciales en `proy_scrapping_detail/logs_ejecucion/` y `proy_heatmap/logs_ejecucion/` tras las primeras ejecuciones.
+
+
 > Las entradas que usan `.sh` no necesitan `cd`: el launcher auto-detecta su `PROJECT_DIR`.
 > Las de python directo (E, G) cargan `.env` explícitamente (`set -a && . ./.env && set +a`).
 

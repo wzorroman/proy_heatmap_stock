@@ -9,6 +9,22 @@ load_dotenv(ENV_PATH, override=False)
 
 VERSION = "3.1.0"
 
+PROJECT_PATH = Path(__file__).resolve().parent
+
+
+def _ruta_salida(var: str, defecto: str) -> Path:
+    """Rutas de salida: variable de entorno o, si falta, dentro del proyecto."""
+    valor = (os.getenv(var) or "").strip()
+    if not valor:
+        return PROJECT_PATH / defecto
+    return Path(valor).expanduser()
+
+
+# Raices de escritura del radar (FILES_OUTPUT_SCRAPPING) y del calendario
+# (FILES_OUTPUT_CALENDAR). Sin valor en entorno -> dentro de la carpeta del proyecto.
+FILES_OUTPUT_SCRAPPING = _ruta_salida("FILES_OUTPUT_SCRAPPING", "DATOS_LIVE")
+FILES_OUTPUT_CALENDAR = _ruta_salida("FILES_OUTPUT_CALENDAR", "DATOS_LIVE_CALENDARIO")
+
 # Variables de BD (solo requeridas si DB_WRITE_ENABLED=true)
 PG_HOST = os.getenv("BD_HEATMAP_HOST", "localhost")
 PG_PORT = int(os.getenv("BD_HEATMAP_PORT", "5432"))

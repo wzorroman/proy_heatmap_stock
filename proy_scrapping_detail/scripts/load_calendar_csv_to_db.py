@@ -39,7 +39,8 @@ from db.audit_repository import log_sync_run, update_checkpoint
 logger = logging.getLogger('load_calendar_csv')
 BATCH_SIZE = 500
 SCRIPT_NAME = 'backfill_calendar_csv'
-CALENDARIO_DIR = os.path.join(PARENT, 'DATOS_LIVE_CALENDARIO', 'calendario_economico')
+# Raíz del calendario (env var FILES_OUTPUT_CALENDAR, ver config.py).
+CALENDARIO_DIR = str(config.FILES_OUTPUT_CALENDAR / 'calendario_economico')
 
 # Cabecera mínima del esquema V5 (id + timestamp_captura) exigida para cargar.
 V5_REQUIRED = ('id', 'timestamp_captura')

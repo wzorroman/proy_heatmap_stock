@@ -57,7 +57,7 @@ from datetime import datetime, timezone, timedelta
 import config
 from config import CONFIG_ACTIVOS
 
-BASE_DIR = "DATOS_LIVE"
+BASE_DIR = str(config.FILES_OUTPUT_SCRAPPING)
 
 # ==============================================================================
 # 1. LOGGING UNIFICADO
@@ -367,6 +367,8 @@ def consolidar_analisis():
 
     filas = []
     for root, dirs, files in os.walk(BASE_DIR):
+        # `heatmap/` contiene el universo del heatmap (otro esquema): fuera.
+        dirs[:] = [d for d in dirs if d != "heatmap"]
         for file in files:
             if file.endswith(".csv") and not file.startswith("historico_") and "consolidado" not in file:
                 try:

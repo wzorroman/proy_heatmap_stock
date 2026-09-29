@@ -26,6 +26,7 @@ import asyncio
 import sys
 from pathlib import Path
 import glob
+import config
 
 # Cargar variables de entorno desde .env
 try:
@@ -73,8 +74,21 @@ MAX_CICLOS_ESPERAR = 2
 CICLO_ALERTA_WARNING = 1.5
 TIEMPO_ESPERA_MIN_EVITAR_SPAM = 60  # 30 MIN : 1800
 # Directorio base
-BASE_DIR = Path("DATOS_LIVE")
-CALENDARIO_LOG_DIR = BASE_DIR / "calendario_economico" / "logs"
+# Raíces de series (radar) y de calendario: env vars, con fallback a la
+# carpeta del proyecto (ver config.py). Antes ambas se asumían bajo DATOS_LIVE.
+BASE_DIR = config.FILES_OUTPUT_SCRAPPING
+CALENDARIO_LOG_DIR = config.FILES_OUTPUT_CALENDAR / "calendario_economico" / "logs"
+
+# El calendario solo captura dentro de la ventana NYSE (mismo gate que
+# calendario_tradingview_live_v5.py: arranque 08:00 ET). Fuera de ella el
+# checkpoint envejece por diseño, así que el monitor no debe alertar.
+CALENDARIO_PRE_MIN = 90
+CALENDARIO_DIR = config.FILES_OUTPUT_CALENDAR / "calendario_economico"
+try:
+    from db.sessions import en_ventana_nyse
+except Exception as _e:  # sin exchange_calendars/BD el gate no aplica
+    en_ventana_nyse = None
+    print(f"⚠️  Gate NYSE no disponible ({_e}); el calendario se verificará sin ventana")
 
 # Configuración de archivos a monitorear
 ARCHIVOS_A_MONITOREAR = [
@@ -108,14 +122,14 @@ ARCHIVOS_A_MONITOREAR = [
     },
     # Calendario económico (cada 15 minutos) - Usa timestamp_captura
      {
-        'ruta': BASE_DIR / "calendario_economico" / "checkpoint.json",  # ← Cambiado a checkpoint.json
+        'ruta': CALENDARIO_DIR / "checkpoint.json",  # ← Cambiado a checkpoint.json
         'intervalo_minutos': 15,
         'proceso': 'calendario_tradingview_live_v2.py',
         'nombre_archivo': 'checkpoint.json',
         'tipo': 'calendario',
         'campo_timestamp': 'fecha_ultima_revision',  # ← Campo en el checkpoint
         'es_json': True,  # ← Nuevo: indica que es archivo JSON
-        'log_dir': BASE_DIR / "calendario_economico" / "logs",
+        'log_dir': CALENDARIO_DIR / "logs",
         'cron_config': '*/15 * * * *'
     }
 ]
@@ -405,16 +419,32 @@ class MonitorTradingView:
         estados = []
         log_calendario = None
 
-        for config in ARCHIVOS_A_MONITOREAR:
-            ruta = config['ruta']
-            intervalo = config['intervalo_minutos']
-            proceso = config['proceso']
-            nombre = config['nombre_archivo']
-            tipo = config['tipo']
+        for cfg in ARCHIVOS_A_MONITOREAR:
+            ruta = cfg['ruta']
+            intervalo = cfg['intervalo_minutos']
+            proceso = cfg['proceso']
+            nombre = cfg['nombre_archivo']
+            tipo = cfg['tipo']
 
             print(f"\n📁 ANALIZANDO: {nombre}")
             print(f"   Proceso: {proceso}")
             print(f"   Tipo: {tipo} | Intervalo: cada {intervalo} min")
+
+            # El calendario solo captura dentro de la ventana NYSE: fuera de ella
+            # el checkpoint envejece por diseño y no debe generar alerta.
+            if tipo == 'calendario' and en_ventana_nyse is not None \
+                    and not en_ventana_nyse(pre_min=CALENDARIO_PRE_MIN):
+                print(f"   ⏭️  OMITIDO: fuera de la ventana NYSE "
+                      f"(pre_min={CALENDARIO_PRE_MIN}) — sin verificación de frescura")
+                estados.append({
+                    'nombre': nombre,
+                    'proceso': proceso,
+                    'estado': 'OMITIDO',
+                    'ultima_fecha': None,
+                    'diferencia': None,
+                    'tipo': tipo
+                })
+                continue
 
             # Verificar archivo
             if not os.path.exists(ruta):
@@ -440,7 +470,7 @@ class MonitorTradingView:
 
             # Obtener último timestamp
             ultimo_timestamp, fecha_str, error, campo_usado = self.obtener_ultimo_timestamp(
-                ruta, tipo, config.get('campo_timestamp')
+                ruta, tipo, cfg.get('campo_timestamp')
             )
 
             if error:
@@ -537,8 +567,8 @@ class MonitorTradingView:
                 alertas_data.append(alerta_info)
 
                 # Obtener últimas líneas del log si es calendario
-                if tipo == 'calendario' and 'log_dir' in config and not log_calendario:
-                    log_calendario = self.obtener_ultimas_lineas_log(config['log_dir'], 50)
+                if tipo == 'calendario' and 'log_dir' in cfg and not log_calendario:
+                    log_calendario = self.obtener_ultimas_lineas_log(cfg['log_dir'], 50)
                     if log_calendario and log_calendario[1]:
                         print(f"   📋 Últimas líneas del log obtenidas")
 
@@ -594,6 +624,9 @@ class MonitorTradingView:
         if calendarios:
             print("\n📅 --- CALENDARIO --- (c/15min):")
             for e in calendarios:
+                if e['estado'] == 'OMITIDO':
+                    print(f"  ⏭️ {e['nombre']:<20} {'OMITIDO':<10} (fuera de ventana NYSE)")
+                    continue
                 emoji = "✅" if e['estado'] == 'OK' else "⚠️" if e['estado'] == 'WARNING' else "❌"
                 fecha_str = e['ultima_fecha'] if e['ultima_fecha'] else "N/A"
                 diff_str = f"{e['diferencia']:.1f} min" if e['diferencia'] else "N/A"

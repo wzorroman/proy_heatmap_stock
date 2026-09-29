@@ -50,6 +50,7 @@ import requests
 import pandas as pd
 from datetime import datetime, timezone, timedelta
 from config import CONFIG_ACTIVOS
+import config
 
 # ==============================================================================
 # 1. CONFIGURACIÓN DE ACTIVOS Y ENDPOINTS (Basado en Testing 07)
@@ -78,7 +79,7 @@ CAMPOS = "close,volume,RSI,CCI20,BBPower,ADX,Pivot.M.Camarilla.R3,Perf.W,change"
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
 }
-BASE_DIR = "DATOS_LIVE"
+BASE_DIR = str(config.FILES_OUTPUT_SCRAPPING)
 
 # Resiliencia anti-bloqueo (rate-limit / protección de IP)
 ESPERAS_BACKOFF_429 = [15, 45, 120]   # Backoff progresivo ante 429 (total máx: 180s)

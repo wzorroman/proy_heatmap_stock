@@ -41,7 +41,10 @@ from db.audit_repository import log_sync_run
 logger = logging.getLogger('load_market_csv')
 BATCH_SIZE = 5000
 SCRIPT_NAME = 'backfill_market_csv'
-DIR_ROOTS = ('DATOS_LIVE',)
+# Raíz de las series del radar (env var FILES_OUTPUT_SCRAPPING, ver config.py).
+DIR_ROOTS = (str(config.FILES_OUTPUT_SCRAPPING),)
+# Subcarpetas que NO son series del radar (universo del heatmap: otro esquema).
+DIR_EXCLUIDOS = ('heatmap',)
 ARCHIVO_PATTERN = re.compile(r'_20\d{4}/')
 
 # CSV: ADX,BBPower,CCI20,Perf.W,Pivot.M.Camarilla.R3,RSI,change,close,volume,timestamp_utc,fecha_iso,simbolo
@@ -93,11 +96,13 @@ def json_number(val: str):
 def iter_csv_files():
     """Rinde todos los CSV de DATOS_LIVE: primero históricos, luego buffer activo."""
     for root in DIR_ROOTS:
-        base = os.path.join(PARENT, root)
+        base = root
         historics = sorted(glob.glob(os.path.join(base, '*_20*/historico_*.csv')))
-        actives = sorted(glob.glob(os.path.join(base, '*/*.csv')))
-        actives = [f for f in actives if not ARCHIVO_PATTERN.search(f)]
-        for f in historics + actives:
+        activos = sorted(glob.glob(os.path.join(base, '*/*.csv')))
+        activos = [f for f in activos
+                   if not ARCHIVO_PATTERN.search(f)
+                   and os.path.basename(os.path.dirname(f)) not in DIR_EXCLUIDOS]
+        for f in historics + activos:
             yield f
 
 

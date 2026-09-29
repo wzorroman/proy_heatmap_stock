@@ -9,8 +9,12 @@ Objetivo:
   para documentar los campos relevantes del heatmap.
 
 Uso:
-    . .venv/bin/activate && python heatmap/export_heatmap_v2.py
-    . .venv/bin/activate && python heatmap/export_heatmap_v2.py --output heatmap/heatmap_symbols_v2.csv
+    . venv/bin/activate && python export_heatmap_v2.py
+    . venv/bin/activate && python export_heatmap_v2.py --output /ruta/heatmap_symbols_v2.csv
+
+La ruta por defecto sale de FILES_OUTPUT_SCRAPPING (env var), en la subcarpeta
+`heatmap/`. Esa subcarpeta queda excluida del consolidado del radar y del ETL
+CSV->BD, que solo deben leer las series `{SYMBOL}/`.
 """
 
 from __future__ import annotations
@@ -24,9 +28,15 @@ from typing import Any
 
 import requests
 
+import config
+
 ROOT_DIR = Path(__file__).resolve().parents[1]
 URL = "https://scanner.tradingview.com/america/scan?label-product=heatmap-stock"
 CAPTURED_SCAN_PATH = ROOT_DIR / "raw" / "responses" / "0196_america_scan_bf8828f8dd_8f5b42c8c525.json"
+
+# Salida compartida con el resto del ecosistema (env var FILES_OUTPUT_SCRAPPING).
+OUTPUT_DIR = config.FILES_OUTPUT_SCRAPPING / "heatmap"
+OUTPUT_DEFAULT = OUTPUT_DIR / "heatmap_symbols_v2.csv"
 
 HEADERS = {
     "accept": "application/json, text/plain, */*",
@@ -256,7 +266,8 @@ def export_raw_csv(payload: dict[str, Any], output_path: Path) -> int:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Exporta el endpoint de heatmap a CSV v2.")
     parser.add_argument("--url", default=URL, help="Endpoint del scanner")
-    parser.add_argument("--output", default=str(ROOT_DIR / "heatmap" / "heatmap_symbols_v2.csv"), help="Ruta del CSV normalizado")
+    parser.add_argument("--output", default=str(OUTPUT_DEFAULT),
+                        help="Ruta del CSV normalizado (default: FILES_OUTPUT_SCRAPPING/heatmap)")
     args = parser.parse_args()
 
     payload = resolve_payload(args.url, HEADERS)

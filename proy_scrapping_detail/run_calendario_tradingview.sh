@@ -1,25 +1,29 @@
 #!/bin/bash
 
-# run_calendario_tradingview.sh - v3.1.0
+# run_calendario_tradingview.sh - v3.1.1
 # Script para ejecutar el calendario económico de TradingView
 # Correcciones: rutas DATOS_LIVE_CALENDARIO, verificación BD, PROJECT_DIR auto-detectado
+# v3.1.1: raíz del calendario vía FILES_OUTPUT_CALENDAR (mismo fallback que config.py)
 
 # ============================================
 # CONFIGURACIÓN INICIAL Y CARGA DE ENTORNO
 # ============================================
 
-# Auto-detectar PROJECT_DIR (directorio donde está este script)
+# Auto-detectar el directorio donde está este script
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="${PROJECT_DIR:-$SCRIPT_DIR}"
 
-ENV_FILE="./.env"
-
-# Cargar variables del archivo .env si existe
+# Cargar el .env del propio proyecto (no "./.env", relativo al CWD)
+ENV_FILE="$SCRIPT_DIR/.env"
 if [ -f "$ENV_FILE" ]; then
     set -a
     source "$ENV_FILE"
     set +a
 fi
+
+# PROJECT_DIR se reafirma DESPUÉS del .env a propósito: el .env de este repo
+# trae PROJECT_DIR apuntando al repo padre, que no contiene ni el script ni el
+# venv (check_directories abortaba ahí). Override explícito: PROJECT_DIR_OVERRIDE.
+PROJECT_DIR="${PROJECT_DIR_OVERRIDE:-$SCRIPT_DIR}"
 
 SERVER_ID="${SERVER_ID:-WZ-PC}"
 
@@ -29,11 +33,22 @@ SERVER_ID="${SERVER_ID:-WZ-PC}"
 
 CALENDARIO_SCRIPT="$PROJECT_DIR/calendario_tradingview_live_v5.py"
 VENV_PYTHON="$PROJECT_DIR/venv/bin/python3"
-ENV_FILE="$PROJECT_DIR/.env"
 LOG_DIR="$PROJECT_DIR/logs_ejecucion"
 EXEC_LOG="$LOG_DIR/calendario_$(date +%Y%m%d_%H%M%S).log"
 
 mkdir -p "$LOG_DIR"
+
+# ============================================
+# RUTAS DE DATOS
+# ============================================
+
+# Raíz del calendario. Misma fuente que calendario_tradingview_live_v5.py:
+# env var FILES_OUTPUT_CALENDAR y, si falta, dentro de la carpeta del proyecto.
+init_rutas() {
+    CALENDARIO_DATA_DIR="${FILES_OUTPUT_CALENDAR:-$PROJECT_DIR/DATOS_LIVE_CALENDARIO}"
+}
+
+init_rutas
 
 # ============================================
 # FUNCIONES
@@ -85,6 +100,8 @@ load_env_vars() {
         set -a
         source "$ENV_FILE"
         set +a
+        # El .env puede traer FILES_OUTPUT_CALENDAR: recalcular la raíz.
+        init_rutas
     fi
 }
 
@@ -114,8 +131,8 @@ else:
 }
 
 check_directorio_calendario() {
-    # CORRECCIÓN v3.1.0: DATOS_LIVE_CALENDARIO (no DATOS_LIVE)
-    local CALENDARIO_DIR="$PROJECT_DIR/DATOS_LIVE_CALENDARIO/calendario_economico"
+    # Raíz vía FILES_OUTPUT_CALENDAR (ver init_rutas)
+    local CALENDARIO_DIR="$CALENDARIO_DATA_DIR/calendario_economico"
 
     if [ ! -d "$CALENDARIO_DIR" ]; then
         log "📁 Creando directorio calendario_economico..."
@@ -159,8 +176,8 @@ run_calendario() {
 }
 
 check_resultados() {
-    # CORRECCIÓN v3.1.0: DATOS_LIVE_CALENDARIO
-    local CALENDARIO_DIR="$PROJECT_DIR/DATOS_LIVE_CALENDARIO/calendario_economico"
+    # Raíz vía FILES_OUTPUT_CALENDAR (ver init_rutas)
+    local CALENDARIO_DIR="$CALENDARIO_DATA_DIR/calendario_economico"
     local EVENTOS_FILE="$CALENDARIO_DIR/eventos_calendario.csv"
 
     log "📊 Verificando archivos generados..."
@@ -194,7 +211,7 @@ cleanup_old_logs() {
     find "$LOG_DIR" -name "calendario_*.log" -type f -mtime +$DIAS_MANTENER -delete 2>/dev/null
 
     # Logs del calendario
-    local CALENDARIO_LOG_DIR="$PROJECT_DIR/DATOS_LIVE_CALENDARIO/calendario_economico/logs"
+    local CALENDARIO_LOG_DIR="$CALENDARIO_DATA_DIR/calendario_economico/logs"
     if [ -d "$CALENDARIO_LOG_DIR" ]; then
         find "$CALENDARIO_LOG_DIR" -name "calendario_*.log" -type f -mtime +$DIAS_MANTENER -delete 2>/dev/null
     fi
@@ -208,7 +225,7 @@ cleanup_old_logs() {
 
 main() {
     echo "=======================================" | tee -a "$EXEC_LOG"
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 📅 [$SERVER_ID] CALENDARIO ECONÓMICO TRADINGVIEW v3.1.0" | tee -a "$EXEC_LOG"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 📅 [$SERVER_ID] CALENDARIO ECONÓMICO TRADINGVIEW v3.1.1" | tee -a "$EXEC_LOG"
     echo "=======================================" | tee -a "$EXEC_LOG"
 
     log "📝 Log: $(basename $EXEC_LOG)"
