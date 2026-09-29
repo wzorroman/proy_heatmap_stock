@@ -104,6 +104,11 @@ load_env_vars() {
         # El .env puede traer FILES_OUTPUT_SCRAPPING: recalcular la raíz.
         init_rutas
     fi
+    # Normalizar el flag de BD: config.py acepta 'True'/'TRUE' (.lower() == 'true'),
+    # pero aquí se compara literalmente contra "true". Sin esto, un 'True' del
+    # .env deja la verificación de BD desactivada mientras Python SÍ escribe en BD.
+    DB_WRITE_ENABLED="$(printf '%s' "${DB_WRITE_ENABLED:-false}" | tr '[:upper:]' '[:lower:]')"
+    export DB_WRITE_ENABLED
 }
 
 check_db_connection() {
@@ -145,6 +150,25 @@ run_seed_symbols() {
 
 check_directorios_datos() {
     log "📁 Raíz de datos: $DATOS_DIR"
+
+    # La raíz debe existir y ser escribible por el usuario que corre el scraper.
+    # Sin esto, el ciclo muerde en el primer símbolo con PermissionError.
+    if [ ! -d "$DATOS_DIR" ]; then
+        log "📁 Creando raíz de datos: $DATOS_DIR"
+        if ! mkdir -p "$DATOS_DIR"; then
+            log "❌ ERROR: no se pudo crear $DATOS_DIR (¿permisos en $(dirname "$DATOS_DIR")?)"
+            return 1
+        fi
+    fi
+
+    if [ ! -w "$DATOS_DIR" ]; then
+        log "❌ ERROR: $DATOS_DIR no es escribible por $(id -un)"
+        log "   Archivos con dueño/permisos:"
+        log "   $(ls -ld "$DATOS_DIR" 2>&1)"
+        log "   Sustituye el dueño o ajusta permisos, p.ej.:"
+        log "   sudo chown -R $(id -un):$(id -gn) \"$DATOS_DIR\""
+        return 1
+    fi
 
     # Verificar que existen los directorios críticos
     local DIRS_CRITICOS=(
@@ -263,8 +287,12 @@ main() {
     # Seed de dim_asset (solo altas nuevas; no-op si ya están cubiertos)
     run_seed_symbols
 
-    # Verificar directorios de datos
-    check_directorios_datos
+    # Verificar directorios de datos (aborta si la raíz no es escribible)
+    if ! check_directorios_datos; then
+        log "❌ No se puede escribir en la raíz de datos — se omite el ciclo"
+        log "📋 RESUMEN: Código 1"
+        exit 1
+    fi
 
     # Ejecutar scraper
     echo ""

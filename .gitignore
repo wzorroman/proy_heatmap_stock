@@ -184,3 +184,5 @@ pyrightconfig.json
 
 proy_heatmap/LOGS/*
 proy_scrapping_detail/venv/*
+.agents/*
+skills-lock.json

@@ -543,7 +543,6 @@ def main():
 
         folder_clean = sanitizar_nombre(symbol)
         path_base = os.path.join(BASE_DIR, folder_clean)
-        os.makedirs(path_base, exist_ok=True)
         csv_file = os.path.join(path_base, f"{folder_clean}.csv")
 
         logger.info(f"[{i+1}/{len(lista_en_ventana)}] {symbol}...")
@@ -567,12 +566,27 @@ def main():
         if isinstance(res, dict):
             fallos_por_exchange[prefijo] = 0
             capturados += 1
-            # CSV (sin cambios) — buffer raw / fallback
-            df_new = pd.DataFrame([res])
-            escribir_fila_csv(csv_file, df_new)
-            rotar_datos(csv_file, folder_clean)
+            # CSV (sin cambios) — buffer raw / fallback.
+            # Un destino no escribible (permisos, disco lleno) no debe tumbar el
+            # ciclo: se registra el fallo y se sigue con el resto de símbolos,
+            # el flush a BD y la auditoría. F3.4 · breaker por exchange.
+            try:
+                os.makedirs(path_base, exist_ok=True)
+                df_new = pd.DataFrame([res])
+                escribir_fila_csv(csv_file, df_new)
+                rotar_datos(csv_file, folder_clean)
+            except OSError as e:
+                logger.error(f"CSV no escribible {csv_file}: {e}")
+                simbolos_fallidos.append(symbol)
+                fallos_por_exchange[prefijo] += 1
+                if fallos_por_exchange[prefijo] >= MAX_FALLOS_CONSECUTIVOS:
+                    exchanges_rotos.add(prefijo)
+                    logger.warning(f"CIRCUIT BREAKER: exchange {prefijo} superó "
+                                   f"{MAX_FALLOS_CONSECUTIVOS} fallos de escritura. "
+                                   f"Sigue el resto del ciclo.")
 
-            # BD (nuevo) — acumular al batch para un solo flush por ciclo
+            # BD (nuevo) — acumular al batch para un solo flush por ciclo.
+            # Se mantiene aunque el CSV falle: la BD es el sistema de registro.
             if config.DB_WRITE_ENABLED:
                 batch_buffer.append(res)
         else:

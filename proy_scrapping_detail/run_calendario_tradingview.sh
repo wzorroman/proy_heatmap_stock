@@ -103,6 +103,11 @@ load_env_vars() {
         # El .env puede traer FILES_OUTPUT_CALENDAR: recalcular la raíz.
         init_rutas
     fi
+    # Normalizar el flag de BD: config.py acepta 'True'/'TRUE' (.lower() == 'true'),
+    # pero aquí se compara literalmente contra "true". Sin esto, un 'True' del
+    # .env deja la verificación de BD desactivada mientras Python SÍ escribe en BD.
+    DB_WRITE_ENABLED="$(printf '%s' "${DB_WRITE_ENABLED:-false}" | tr '[:upper:]' '[:lower:]')"
+    export DB_WRITE_ENABLED
 }
 
 check_db_connection() {

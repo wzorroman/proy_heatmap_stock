@@ -43,31 +43,39 @@ except ImportError:
 except Exception as e:
     print(f"⚠️  Error cargando .env: {e}")
 
-# Importar notificador de Telegram
+# Importar notificador de Telegram.
+#TODO: (fase futura): reemplazar por el paquete compartido `wz_notify`
+# (interfaz Notificador + backends pluggables + multi-canal: Slack, webhook…).
+# De momento se mantiene este módulo local por simplicidad.
 try:
     from notificador_telegram import TelegramNotificador
 except ImportError:
-    print("❌ Error: No se pudo importar TelegramNotificador")
-    print("   Asegúrate de que notificador_telegram.py está en el mismo directorio")
-    sys.exit(1)
+    print("⚠️  No se pudo importar TelegramNotificador; las alertas solo se "
+          "registrarán en el log")
+
+    class TelegramNotificador:  # stub de degradación (no aborta el monitor)
+        def __init__(self, *args, **kwargs):
+            self.deshabilitado = True
+
+        async def enviar(self, *args, **kwargs):
+            print(f"⚠️  [Telegram no disponible] {kwargs.get('titulo', 'ALERTA')}")
+            return False
 
 # Configuración desde variables de entorno
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 SERVER_ID = os.getenv('SERVER_ID', "WZAUMA")
 
-# Validar configuración de Telegram
+# Sin credenciales NO se aborta: el notificador queda deshabilitado y solo
+# registra las alertas como warning en el log (ver notificador_telegram.py).
 if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
-    print("❌ Error: TELEGRAM_TOKEN y TELEGRAM_CHAT_ID deben estar configurados")
-    print("   Crea un archivo .env con:")
-    print("   TELEGRAM_TOKEN=tu_token")
-    print("   TELEGRAM_CHAT_ID=tu_chat_id")
-    sys.exit(1)
+    print("⚠️  TELEGRAM_TOKEN/TELEGRAM_CHAT_ID no configurados: notificación "
+          "deshabilitada, las alertas solo se registrarán en el log.")
 
 # Convertir chat_id a entero si es necesario
 try:
     TELEGRAM_CHAT_ID = int(TELEGRAM_CHAT_ID)
-except ValueError:
+except (TypeError, ValueError):
     pass
 
 MAX_CICLOS_ESPERAR = 2
@@ -351,10 +359,13 @@ class MonitorTradingView:
                 for alerta in activos_alerta:
                     lines.append(f"  • *{alerta['nombre']}*")
                     lines.append(f"    ⚙️ {alerta['proceso']}")
-                    lines.append(f"    📅 Último: {alerta['ultima_fecha']}")
-                    lines.append(f"    ⏱️ hace {alerta['diferencia']:.1f} min | {alerta['ciclos_perdidos']:.1f} ciclos perdidos")
+                    # Las alertas con 'error' (p.ej. ARCHIVO NO ENCONTRADO) no
+                    # traen 'diferencia'/'ciclos_perdidos' → no formatear None.
                     if alerta.get('error'):
                         lines.append(f"    ⚠️ {alerta['error']}")
+                    else:
+                        lines.append(f"    📅 Último: {alerta['ultima_fecha']}")
+                        lines.append(f"    ⏱️ hace {alerta['diferencia']:.1f} min | {alerta['ciclos_perdidos']:.1f} ciclos perdidos")
                     lines.append("")
 
             if calendario_alerta:
