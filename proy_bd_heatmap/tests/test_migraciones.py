@@ -3,7 +3,8 @@
 
 Cubren:
 - La cadena de revisiones (0001 baseline → 0002 seed → 0003 F4.2 →
-  0004 F4.3 → 0005 F4.4 → 0006 F4.5/F4.5b) es lineal y completa.
+  0004 F4.3 → 0005 F4.4 → 0006 F4.5/F4.5b → 0007 seed dim_country) es lineal
+  y completa.
 - El `upgrade head` sobre una BD scratch vacía crea el esquema y los catálogos.
 - Idempotencia del seed: re-ejecutar 0002 no duplica filas.
 - La migración baseline embebida tiene upgrade/downgrade ejecutables.
@@ -16,7 +17,13 @@ Cubren:
 - F4.5 `dim_asset` Tipo 1: columnas SCD2 removidas, funciones/vistas sin
   `current_version`, índices reconstruidos y `idx_dim_asset_symbol` eliminado.
 - F4.5b mapeo canónico: 6 claves lógicas con 1 canónico cada una, alta de
-  `TVC:DXY` (dim_asset 1668 → 1669) y `feed_delay_s` por clase.
+  `TVC:DXY` (dim_asset 1668 → 1669) y `feed_delay_s` por clase; 0008 completa el
+  universo a 1.679 símbolos con los ids 4702-4711.
+- Seed `dim_country`: los 11 países del calendario económico quedan poblados y
+  `fact_economic_event.country` puede insertar sin violar FK.
+- 0008: `dim_asset` cierra en 1.679 con los ids 4702-4711, secuencia en 4711 y
+  `feed_delay_s` sin NULL, de modo que `upsert_market_series` acepta cualquier
+  símbolo del universo.
 
 Requiere una BD de prueba `heatmap_stock_test` (se crea/limpia por el test).
 """
@@ -84,9 +91,11 @@ def test_historial_lineal(bd_scratch):
     assert "0004 -> 0003" in r.stdout or "0003 -> 0004" in r.stdout
     assert "0005 -> 0004" in r.stdout or "0004 -> 0005" in r.stdout
     assert "0006 -> 0005" in r.stdout or "0005 -> 0006" in r.stdout
-    # head == 0006 (0001 baseline → 0002 seed → 0003 F4.2 → 0004 F4.3 → 0005 F4.4 → 0006 F4.5/F4.5b)
+    assert "0007 -> 0006" in r.stdout or "0006 -> 0007" in r.stdout
+    assert "0008 -> 0007" in r.stdout or "0007 -> 0008" in r.stdout
+    # head == 0008 (0001 baseline → 0002 seed → 0003 F4.2 → 0004 F4.3 → 0005 F4.4 → 0006 F4.5/F4.5b → 0007 seed dim_country → 0008 alta dim_asset)
     r = _run([ALEMBIC, "current"])
-    assert "0006 (head)" in r.stdout
+    assert "0008 (head)" in r.stdout
 
 
 def test_esquema_baseline(bd_scratch):
@@ -95,7 +104,7 @@ def test_esquema_baseline(bd_scratch):
         "SELECT string_agg(table_name, ',') FROM information_schema.tables "
         "WHERE table_schema='public';\n"
     )
-    for t in ("dim_asset", "dim_time", "dim_trading_session",
+    for t in ("dim_asset", "dim_time", "dim_trading_session", "dim_country",
               "fact_market_series", "fact_heatmap_snapshot",
               "fact_market_bar_15m", "fact_market_indicator_tf",
               "latest_market_tick", "fact_economic_event",
@@ -207,7 +216,7 @@ def test_dim_asset_tipo1(bd_scratch):
 
 def test_mapeo_canonico(bd_scratch):
     """F4.5b: alta de TVC:DXY y 6 claves lógicas con 1 canónico cada una."""
-    assert _count("dim_asset") == 1669
+    assert _count("dim_asset") == 1679
     n = _psql("SELECT count(*) FROM dim_asset WHERE symbol='TVC:DXY';\n")
     assert int(n.strip()) == 1
     # invariante del índice único: a lo sumo 1 canónico por logical_key
@@ -253,7 +262,7 @@ def test_feed_delay_backfill(bd_scratch):
         "(asset_class IS NULL OR asset_class NOT IN "
         "('equity','etf','common','preferred','unit','future'));\n"
     )
-    assert int(n900.strip()) == 1087 + 25 + 527  # equity + etf + common
+    assert int(n900.strip()) == 1087 + 25 + 537  # equity + etf + common (527 de 0002 + 10 de 0008)
     assert int(n600.strip()) == 9                # futures
     assert int(n0.strip()) == 2 + 2 + 13 + 2 + 2  # commodity+crypto+forex+index(con TVC:DXY)+yield
     nn = _psql("SELECT count(*) FROM dim_asset WHERE feed_delay_s IS NULL;\n")
@@ -283,19 +292,133 @@ def test_extension_y_funciones(bd_scratch):
 
 
 def test_seed_catalogos(bd_scratch):
-    """dim_asset/dim_time/dim_trading_session quedan poblados."""
-    assert _count("dim_asset") == 1669
+    """dim_asset/dim_time/dim_trading_session/dim_country quedan poblados."""
+    assert _count("dim_asset") == 1679
     assert _count("dim_time") == 730
     assert _count("dim_trading_session") == 630
+    assert _count("dim_country") == 11
+
+
+def test_seed_dim_country(bd_scratch):
+    """0007: los 11 países del calendario económico con sus datos completos."""
+    out = _psql(
+        "SELECT string_agg(country_code, ',' ORDER BY country_code) "
+        "FROM dim_country;\n"
+    )
+    assert out.strip() == "AU,CA,CH,CN,DE,ES,FR,GB,IT,JP,US"
+    # country_name, region y currency_code no pueden quedar nulos
+    nulos = _psql(
+        "SELECT count(*) FROM dim_country "
+        "WHERE country_name IS NULL OR region IS NULL OR currency_code IS NULL;\n"
+    )
+    assert nulos.strip() == "0"
+
+
+def test_seed_dim_country_idempotente(bd_scratch):
+    """downgrade+upgrade de 0007 no duplica ni desalinea el catálogo."""
+    _run([ALEMBIC, "downgrade", "0006"])
+    assert _count("dim_country") == 0
+    _run([ALEMBIC, "upgrade", "head"])
+    assert _count("dim_country") == 11
+    # re-ejecución sobre la BD ya sembrada no cambia nada
+    _run([ALEMBIC, "upgrade", "head"])
+    assert _count("dim_country") == 11
+
+
+def test_dim_asset_alta_universo(bd_scratch):
+    """0008: los 10 símbolos discoveries por el scraper con id 4702-4711."""
+    out = _psql(
+        "SELECT string_agg(symbol, ',' ORDER BY asset_id) FROM dim_asset "
+        "WHERE asset_id BETWEEN 4702 AND 4711;\n"
+    )
+    assert out.strip() == (
+        "NASDAQ:FRHC,NYSE:FR,NYSE:NEU,NYSE:ADC,NYSE:WAL,"
+        "NYSE:RHP,NASDAQ:AVT,NASDAQ:WYNN,NYSE:KMX,NASDAQ:MXL"
+    )
+    # id explícito y contiguo: los hechos son comparables entre BDs
+    n = _psql("SELECT count(*) FROM dim_asset WHERE asset_id=4702;\n")
+    assert n.strip() == "1"
+    # atributos de catálogo rellenos
+    vacios = _psql(
+        "SELECT count(*) FROM dim_asset WHERE asset_id BETWEEN 4702 AND 4711 "
+        "AND (ticker IS NULL OR exchange IS NULL OR sector IS NULL "
+        "     OR company_name IS NULL OR logo_id IS NULL "
+        "     OR source_discovered_by IS NULL OR NOT is_active);\n"
+    )
+    assert vacios.strip() == "0"
+
+
+def test_dim_asset_alta_universo_ingestable(bd_scratch):
+    """0008: upsert_market_series acepta un símbolo del alta (antes fallaba)."""
+    _psql(
+        "SELECT upsert_market_series('NYSE:WAL', "
+        "    TIMESTAMPTZ '2026-09-29 15:00:00+00', "
+        "    77.7, 10, NULL, NULL, NULL, NULL, NULL, NULL, 0.5, NULL, 'ck0008');\n"
+    )
+    out = _psql("SELECT count(*) FROM fact_market_series WHERE close=77.7;\n")
+    assert out.strip() == "1"
+    _psql("DELETE FROM fact_market_series WHERE source_checksum='ck0008';\n")
+
+
+def test_dim_asset_alta_universo_idempotente(bd_scratch):
+    """downgrade+upgrade de 0008 no duplica y resincroniza la secuencia."""
+    _run([ALEMBIC, "downgrade", "0007"])
+    assert _count("dim_asset") == 1669
+    n = _psql(
+        "SELECT count(*) FROM dim_asset WHERE asset_id BETWEEN 4702 AND 4711;\n"
+    )
+    assert n.strip() == "0"
+    _run([ALEMBIC, "upgrade", "head"])
+    assert _count("dim_asset") == 1679
+    _run([ALEMBIC, "upgrade", "head"])
+    assert _count("dim_asset") == 1679
+    seq = _psql("SELECT last_value FROM dim_asset_asset_id_seq;\n")
+    assert seq.strip() == "4711"
+
+
+def test_universo_completo_sin_huecos(bd_scratch):
+    """La BD limpia cubre los símbolos de la BD en uso.
+
+    `TVC:DXY` (el único alta de 0006) queda excluido del conteo: 0006 lo
+    inserta con `now()`, así que su `created_at`/`updated_at` no es
+    reproducible entre entornos. Es la única diferencia esperada frente a la
+    BD en uso.
+    """
+    out = _psql(
+        "SELECT count(*) FROM dim_asset "
+        "WHERE symbol IN ('NASDAQ:FRHC','NYSE:FR','NYSE:NEU','NYSE:ADC',"
+        "  'NYSE:WAL','NYSE:RHP','NASDAQ:AVT','NASDAQ:WYNN','NYSE:KMX',"
+        "  'NASDAQ:MXL');\n"
+    )
+    assert out.strip() == "10"
+    # ninguna fila de catálogo queda con feed_delay_s sin definir
+    nn = _psql("SELECT count(*) FROM dim_asset WHERE feed_delay_s IS NULL;\n")
+    assert nn.strip() == "0"
+
+
+def test_fk_fact_economic_event_pais(bd_scratch):
+    """Con dim_country poblada, un evento económico inserta sin violar FK."""
+    _psql(
+        "INSERT INTO fact_economic_event "
+        "    (event_id, title, country, event_timestamp) "
+        "VALUES (999000001, 'F3 seed FK', 'US', "
+        "        TIMESTAMPTZ '2026-09-29 14:30:00+00');\n"
+    )
+    out = _psql("SELECT count(*) FROM fact_economic_event WHERE country='US';\n")
+    assert int(out.strip()) == 1
+    _psql("DELETE FROM fact_economic_event WHERE event_id=999000001;\n")
+    # el catálogo sigue íntegro tras la prueba
+    assert _count("dim_country") == 11
 
 
 def test_seed_idempotente(bd_scratch):
     """Downgrade+upgrade de 0002 no duplica filas (ON CONFLICT DO NOTHING)."""
     _run([ALEMBIC, "downgrade", "0001"])
     _run([ALEMBIC, "upgrade", "head"])
-    assert _count("dim_asset") == 1669
+    assert _count("dim_asset") == 1679
     assert _count("dim_time") == 730
     assert _count("dim_trading_session") == 630
+    assert _count("dim_country") == 11
 
 
 def test_seq_dim_asset_sincronizada(bd_scratch):
@@ -303,7 +426,7 @@ def test_seq_dim_asset_sincronizada(bd_scratch):
         "SELECT last_value, (SELECT max(asset_id) FROM dim_asset) "
         "FROM dim_asset_asset_id_seq;\n"
     )
-    assert out.strip() == "4701|4701"
+    assert out.strip() == "4711|4711"
 
 
 def test_downgrade_base(bd_scratch):

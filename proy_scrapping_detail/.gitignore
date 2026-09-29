@@ -187,3 +187,5 @@ pyrightconfig.json
 
 /DATOS_LIVE_2
 /DATOS_LIVE_2/*
+/DATOS_LIVE/*
+/DATOS_LIVE_CALENDARIO/*

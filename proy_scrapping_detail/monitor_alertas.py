@@ -7,8 +7,11 @@ Descripción: Ejecutable manualmente (sin cron todavía). Verifica tres
              condiciones de alerta y envía un único mensaje de Telegram
              si alguna se cumple (F3.11, E-OPS-03):
 
-  1. Datos frescos: `now() - max(ingested_at) > 5 min` estando la sesión
-     NYSE abierta (dim_trading_session). Aplica a fact_heatmap_snapshot.
+   1. Datos frescos: `now() - max(ingested_at) > intervalo_heatmap + gracia`
+      estando la sesión NYSE abierta (dim_trading_session). Aplica a
+      fact_heatmap_snapshot. El umbral se deriva de la cadencia real del
+      cron (15 min) en vez de un valor fijo, y no dispara durante la
+      ventana de gracia en la que la corrida aún está en curso.
   2. 429 recurrente: más de N = MONITOR_MAX_429 en la última hora en
      audit_sync_run FAILED de los scrapers (o indicios en logs).
   3. DB_WRITE_ENABLED=false: escritura desactivada con datos en ventana.
@@ -40,6 +43,23 @@ def get_logger():
 
 
 logger = get_logger()
+
+INTERVALO_HEATMAP_MIN = int(os.getenv("MONITOR_HEATMAP_INTERVALO_MIN", "15"))
+GRACIA_HEATMAP_MIN = int(os.getenv("MONITOR_HEATMAP_GRACIA_MIN", "5"))
+
+
+def slot_heatmap(ahora, intervalo_min: int):
+    """Devuelve (slot_vencido, minutos_desde_slot) alineados al cron `*/N`.
+
+    El slot más reciente es el múltiplo de `intervalo_min` dentro de la hora
+    (`:00`, `:15`, `:30`, `:45` para 15 min). El cron del heatmap añade ~20 s
+    internos, de modo que en los primeros minutos tras un slot la corrida
+    sigue en vuelo y todavía no debe considerarse caída.
+    """
+    slot = ahora.replace(
+        minute=ahora.minute - (ahora.minute % intervalo_min), second=0, microsecond=0
+    )
+    return slot, (ahora - slot).total_seconds() / 60
 
 
 def revolver_http_errors() -> list:
@@ -119,12 +139,26 @@ def main():
                 alertas.append("⚠️ fact_heatmap_snapshot sin registros en ventana")
             else:
                 antiguedad_min = (ahora - max_ing).total_seconds() / 60
-                if antiguedad_min > 5:
+                umbral_min = INTERVALO_HEATMAP_MIN + GRACIA_HEATMAP_MIN
+                slot, desde_slot = slot_heatmap(ahora, INTERVALO_HEATMAP_MIN)
+                if desde_slot < GRACIA_HEATMAP_MIN:
+                    logger.info(
+                        f"Ventana de gracia ({desde_slot:.1f} min desde el slot "
+                        f"{slot:%H:%M}): corrida del heatmap aún en vuelo, no se alerta."
+                    )
+                elif antiguedad_min > umbral_min:
+                    slots_perdidos = antiguedad_min / INTERVALO_HEATMAP_MIN
                     alertas.append(
                         f"⚠️ Sin datos frescos del heatmap: último ingested {antiguedad_min:.1f} min atrás "
+                        f"(umbral {umbral_min:.0f} min = {INTERVALO_HEATMAP_MIN} min de cadencia + "
+                        f"{GRACIA_HEATMAP_MIN} min de gracia; {slots_perdidos:.1f} slots perdidos) "
                         f"(max_ingested_at={max_ing.isoformat()}) en sesión Nº {ahora.isoformat()} UTC"
                     )
-                    # nota: el límite de 5 min aplica dentro de la ventana (F3.11)
+                else:
+                    logger.info(
+                        f"heatmap OK: {antiguedad_min:.1f} min de antigüedad "
+                        f"(umbral {umbral_min:.0f} min)."
+                    )
         else:
             logger.info("Fuera de la ventana NYSE: se omite la alerta de frescura.")
 

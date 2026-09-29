@@ -62,7 +62,9 @@ proy_bd_heatmap/
         ├── 0003_fact_market_indicator_tf_2026_09_23.py  # F4.2 · tabla larga multi-TF
         ├── 0004_latest_market_tick_2026_09_23.py        # F4.3 · último tick por activo
         ├── 0005_fact_heatmap_snapshot_columnas_2026_09_23.py  # F4.4 · snapshots columnas explícitas
-        └── 0006_dim_asset_mapeo_canonico_2026_09_23.py  # F4.5/F4.5b · dim_asset Tipo 1 + mapeo canónico
+        ├── 0006_dim_asset_mapeo_canonico_2026_09_23.py  # F4.5/F4.5b · dim_asset Tipo 1 + mapeo canónico
+        ├── 0007_seed_dim_country_2026_09_29.py  # seed dim_country (11 países)
+        └── 0008_dim_asset_alta_universo_2026_09_29.py  # seed dim_asset (+10 símbolos, ids 4702-4711)
 ```
 
 ---
@@ -97,6 +99,12 @@ Esto ejecuta:
    `uq_dim_asset_canonical_logical_key`; funciones/vistas/índices
    reconstruidos sin `current_version`; elimina `idx_dim_asset_symbol`
    (duplicado). `dim_asset` pasa a 1.669 y la secuencia a 4.701.
+7. `0007` — seed idempotente: carga `dim_country` (11 países) para que
+   `fact_economic_event.country` no viole la FK en una BD nueva.
+8. `0008` — seed idempotente: completa `dim_asset` con los 10 símbolos
+   descubiertos por el scraper tras el corte de `0002` (ids 4702-4711),
+   homogeneiza su `feed_delay_s` a 900 s y deja
+   `dim_asset_asset_id_seq` en 4.711.
 
 ### Ver estado actual
 
@@ -151,6 +159,26 @@ diff <(grep -v '^\\restrict\|^-- Dumped\|^-- PostgreSQL database dump' /tmp/prod
      <(grep -v '^\\restrict\|^-- Dumped\|^-- PostgreSQL database dump' /tmp/scratch.sql)
 #   La única diferencia esperada es la tabla alembic_version.
 ```
+
+#### Equivalencia de una BD limpia con la BD en uso
+
+Además del esquema, una BD creada desde cero con `upgrade head` reproduce los
+**catálogos** de la BD en uso. Diff fila a fila de `dim_asset` (21 columnas),
+`dim_time`, `dim_trading_session` y `dim_country`, más
+`dim_asset_asset_id_seq`:
+
+| Catálogo | BD en uso | BD limpia | Diff |
+|---|---|---|---|
+| `dim_asset` | 1.679 | 1.679 | 0 (ver nota) |
+| `dim_time` | 730 | 730 | 0 |
+| `dim_trading_session` | 630 | 630 | 0 |
+| `dim_country` | 11 | 11 | 0 |
+| `dim_asset_asset_id_seq` | 4.711 | 4.711 | — |
+
+> **Única diferencia esperada**: `TVC:DXY` (el único símbolo que crea `0006`)
+> tiene `created_at`/`updated_at` distintos, porque `0006` lo inserta con
+> `now()`. Es una marca de auditoría no determinista por diseño; ninguna otra
+> columna difiere.
 
 ---
 
@@ -214,6 +242,42 @@ diff <(grep -v '^\\restrict\|^-- Dumped\|^-- PostgreSQL database dump' /tmp/prod
   `dim_asset_symbol_key`).
 - `dim_asset`: 1.668 → **1.669**; `dim_asset_asset_id_seq` → **4.701**.
 - `downgrade()` restaura columnas, mapeo/y alta y los índices legacy.
+
+### `0007` — seed `dim_country` (2026-09-29)
+- Cierra el hueco de la **carga inicial**: `0001` creaba `dim_country` y
+  `0002` sembraba los otros catálogos, pero el país nunca se cargaba
+  (catálogo vacío tras `upgrade head`).
+- `fact_economic_event.country` referencia `dim_country(country_code)`
+  (`fact_economic_event_country_fkey`): sin este seed, cargar el calendario
+  económico en una BD nueva violaba la FK.
+- Siembra los **11 países** del calendario económico (`AU, CA, CH, CN, DE, ES,
+  FR, GB, IT, JP, US`) con `country_name`, `region` y `currency_code`.
+- Idempotente: `INSERT ... ON CONFLICT (country_code) DO UPDATE`, que sincroniza
+  los atributos con el catálogo de referencia sin duplicar filas.
+- `downgrade()` borra los países sembrados **salvo** los que ya tengan eventos
+  en `fact_economic_event`: prefiere dejar el catálogo íntegro antes que romper
+  la integridad referencial.
+
+### `0008` — `dim_asset`: alta de los 10 símbolos faltantes (2026-09-29)
+- `0002` froze el universo de `dim_asset` a partir de un `pg_dump` del
+  2026-09-23 (**1.668**). El scraper `heatmap` descubrió **10 símbolos más**
+  después (`upsert_heatmap_snapshot` inserta en `dim_asset` cuando el símbolo
+  no existe), así que una BD limpia quedaba en **1.669** frente a **1.679**.
+- Siembra los 10 con `asset_id` explícito **4702-4711**
+  (`NASDAQ:FRHC, FR`… `NYSE:ADC, WAL, RHP, AVT, WYNN, KMX, MXL`), idénticos a
+  los de la BD en uso, para que los `asset_id` de los hechos coincidan entre
+  entornos.
+- `ON CONFLICT (symbol) DO UPDATE` sobre las 21 columnas: re-ejecutarla
+  sincroniza la fila en vez de duplicarla.
+- Homogeneiza `feed_delay_s = 900` (asset_class `common`). Los 10 rows
+  quedaron en `NULL` en la BD en uso porque el backfill de `0006` corrió el
+  09-23 y estas filas se insertaron el 09-29; las otras 527 `common` tienen 900.
+- `setval` de `dim_asset_asset_id_seq` a **4.711** sin retroceder por debajo
+  del `MAX(asset_id)` existente.
+- Sin esto, `upsert_market_series` abortaba con `Activo no registrado en
+  dim_asset: NYSE:WAL` en una BD recién cargada.
+- `downgrade()` borra los 10 símbolos sin hechos asociados (protege las FK de
+  `fact_*` y `latest_market_tick`) y resincroniza la secuencia.
 
 ---
 
@@ -322,9 +386,14 @@ cd proy_bd_heatmap
 
 ## Notas
 
-- La BD `heatmap_stock` está actualmente en revisión **`0006 (head)`**
-  (0001 baseline → 0002 seed → 0003 F4.2 → 0004 latest_market_tick → 0005
-  columnas explícitas de snapshot → 0006 dim_asset Tipo 1 + mapeo canónico).
+- La BD `heatmap_stock` (`BD_HEATMAP_HOST` en `.env`) está actualmente en
+  revisión **`0008 (head)`** (0001 baseline → 0002 seed → 0003 F4.2 → 0004
+  latest_market_tick → 0005 columnas explícitas de snapshot → 0006 dim_asset
+  Tipo 1 + mapeo canónico → 0007 seed dim_country → 0008 alta dim_asset).
+  Una BD creada desde cero con `upgrade head` queda **equivalente**: mismo
+  esquema (180 particiones, 181 índices, 34 funciones, 3 vistas) y mismos
+  catálogos (`dim_asset` 1.679 con `dim_asset_asset_id_seq` en 4.711,
+  `dim_time` 730, `dim_trading_session` 630, `dim_country` 11).
 - La tabla de bookkeeping `alembic_version` es la única tabla creada por alembic
   fuera del esquema de negocio.
 - El roadmap y la justificación están en
