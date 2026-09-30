@@ -101,6 +101,10 @@ load_env_vars() {
         set -a
         source "$ENV_FILE"
         set +a
+        # El .env trae PROJECT_DIR apuntando al repo padre (no contiene ni el
+        # script ni el venv): reafirmarlo para que el venv, los imports locales
+        # (db, config) y el fallback de rutas resuelvan en este proyecto.
+        PROJECT_DIR="${PROJECT_DIR_OVERRIDE:-$SCRIPT_DIR}"
         # El .env puede traer FILES_OUTPUT_SCRAPPING: recalcular la raíz.
         init_rutas
     fi
@@ -277,6 +281,15 @@ main() {
 
     # Verificar todo
     check_directories >/dev/null
+
+    # Situarse en el proyecto ANTES de cualquier import local (db, config).
+    # check_db_connection ejecuta `python -c`, y en ese modo sys.path[0] es el
+    # CWD: si cron arranca el script desde otro directorio, `import db` falla y
+    # la BD se marca falsamente como no disponible (DB_WRITE_ENABLED=false).
+    cd "$PROJECT_DIR" || {
+        log "❌ ERROR: No se puede acceder a $PROJECT_DIR"
+        exit 1
+    }
 
     # Cargar variables
     load_env_vars

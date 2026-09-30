@@ -39,6 +39,7 @@ import argparse
 import datetime
 import json
 import logging
+import socket
 from telegram import Bot
 from telegram.constants import ParseMode
 import os
@@ -75,6 +76,10 @@ class TelegramNotificador:
             or DEFAULT_PARSE_MODE
         ).strip() or DEFAULT_PARSE_MODE
 
+        # Identificador del servidor emisor (evita confundir prod con develop).
+        # Si SERVER_ID no está definido, se usa el hostname de la máquina.
+        self.server_id = (os.getenv("SERVER_ID") or "").strip() or socket.gethostname()
+
         self.deshabilitado = False
         self.bot = None
         self.chat_id = None
@@ -105,11 +110,15 @@ class TelegramNotificador:
         else:
             b_open = b_close = i_open = i_close = ""
 
+        etiqueta = f"[{self.server_id}] " if self.server_id else ""
         if titulo:
-            cabecera = f"🔔 {b_open}{titulo}{b_close}\n📅 {i_open}{fecha_formateada}{i_close}"
+            cabecera = (
+                f"🔔 {b_open}{etiqueta}{titulo}{b_close}\n"
+                f"📅 {i_open}{fecha_formateada}{i_close}"
+            )
         else:
             cabecera = (
-                f"📨 {b_open}NUEVA NOTIFICACIÓN{b_close}\n"
+                f"📨 {b_open}{etiqueta}NUEVA NOTIFICACIÓN{b_close}\n"
                 f"📅 {i_open}{fecha_formateada}{i_close}"
             )
 
@@ -141,7 +150,8 @@ class TelegramNotificador:
             texto = self._armar_mensaje(mensaje, titulo, pm)
         else:
             fecha_formateada = datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-            texto = f"[{fecha_formateada}] {mensaje}"
+            etiqueta = f"[{self.server_id}] " if self.server_id else ""
+            texto = f"[{fecha_formateada}] {etiqueta}{mensaje}"
 
         try:
             await self.bot.send_message(

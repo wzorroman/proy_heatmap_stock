@@ -26,6 +26,7 @@ Dependencias:
 """
 
 import os
+import socket
 import sys
 import time
 
@@ -96,6 +97,8 @@ def main():
     # --- Telegram (mejor esfuerzo; no debe matar el monitor) ---
     token = os.getenv('TELEGRAM_TOKEN', '')
     chat_id = os.getenv('TELEGRAM_CHAT_ID', '')
+    # Identificador del servidor emisor (evita confundir prod con develop).
+    server_id = os.getenv('SERVER_ID', '').strip() or socket.gethostname()
 
     def notificar(texto: str):
         import requests
@@ -171,7 +174,7 @@ def main():
 
         # --- Único mensaje ---
         if alertas:
-            msg = "🚨 MONITOR HEATMAP_STOCK\n" + "\n".join(f"• {a}" for a in alertas)
+            msg = f"🚨 MONITOR HEATMAP_STOCK [{server_id}]\n" + "\n".join(f"• {a}" for a in alertas)
             logger.info(msg)
             notificar(msg)
         else:

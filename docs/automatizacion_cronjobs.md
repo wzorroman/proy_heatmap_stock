@@ -196,6 +196,13 @@ autónoma 24/5:
 ---
 
 ## 4. Entradas crontab listas para copiar
+ Para editar el crontab del usuario "appuser" ejecutar en consola:
+ $ crontab -u appuser -e
+ 
+ Para visualizar el crontab sin editarlo, usa:
+ $ crontab -u appuser -l
+ * La opción -l significa "list" (listar). Este comando mostrará el contenido del crontab del usuario appuser sin abrir el editor.
+
 
 ```cron
 # ============================================================
@@ -239,6 +246,9 @@ El bloque anterior fue instalado en el crontab del usuario `appuser` el **2026-0
 Comandos usados para la instalación y verificación:
 
 ```bash
+# editar el crontab del usuario appuser
+crontab -u appuser -e
+
 # Instalar crontab desde archivo temporal (ejecutado como root)
 su - appuser -c "crontab /tmp/heatmap_crontab.txt"
 
