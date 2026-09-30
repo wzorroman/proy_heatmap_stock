@@ -286,3 +286,48 @@ Notas:
    `reports/` de la suite manualmente (sugerencia: 30 días).
 7. **Activación progresiva**: activar primero A + D (captura base), verificar `audit_sync_run`
    con SUCCESS, luego C, E, F, G. Dejar B comentado hasta implementar `--at-close` (F4.1c).
+
+
+## 6. Actualizar rutas del OPT
+  sudo chown -R appuser:appuser "/opt/DATOS_LIVE"
+  sudo chown -R appuser:appuser "/opt/DATOS_LIVE_CALENDAR"
+  sudo chown -R appuser:appuser "tmp/scraper_live_tradingview_v5.lock
+  
+
+## 7. Script en crontab
+```bash
+# ============================================================
+# ECOSISTEMA heatmap_stock    /opt/proy_heatmap_stock
+# TZ: America/New_York
+# Installed: 2026-09-28
+# ============================================================
+
+CRON_TZ=America/New_York
+
+# --- A    RADAR V5 (captura principal, cada 3 min desfasado) ---
+1-59/3 0-23 * * 1-4 /opt/proy_heatmap_stock/proy_scrapping_detail/run_scraper_tradingview.sh
+1-59/3 0-16 * * 5    /opt/proy_heatmap_stock/proy_scrapping_detail/run_scraper_tradingview.sh
+
+# --- B    MUESTREO T ^h^r10 s PARA CIERRE DEFINITIVE (PENDIENTE: dejar comentado) ---
+## 14,29,44,59 * * * 1-4 /opt/.../run_scraper_tradingview.sh --at-close
+## 14,29,44,59 * * * 5    /opt/.../run_scraper_tradingview.sh --at-close
+
+# --- C    HEATMAP V1 (cada 15 min, gate NYSE, +20 s internos) ---
+*/15 0-23 * * 1-4 /opt/proy_heatmap_stock/proy_heatmap/run_heatmap.sh
+*/15 0-16 * * 5    /opt/proy_heatmap_stock/proy_heatmap/run_heatmap.sh
+
+# --- D    CALENDARIO ECON ^sMICO (cada 15 min, checkpoint incremental) ---
+*/15 0-23 * * 1-4 /opt/proy_heatmap_stock/proy_scrapping_detail/run_calendario_tradingview.sh
+*/15 0-16 * * 5    /opt/proy_heatmap_stock/proy_scrapping_detail/run_calendario_tradingview.sh
+
+# --- E    BARRAS 15 MIN (+1 min tras el cierre de cada barra) ---
+1,16,31,46 * * * 1-4 cd /opt/proy_heatmap_stock/proy_scrapping_detail && set -a && . ./.env && set +a && ./venv/bin/python3 scripts/build_market_bar_15m.py
+1,16,31,46 * * * 5    cd /opt/proy_heatmap_stock/proy_scrapping_detail && set -a && . ./.env && set +a && ./venv/bin/python3 scripts/build_market_bar_15m.py
+
+# --- F    SUITE DE CALIDAD NOCTURNA (F4.8, diaria 04:05 ET) ---
+5 4 * * * /opt/proy_heatmap_stock/proy_bd_heatmap/venv/bin/python3 /opt/proy_heatmap_stock/proy_bd_heatmap/scripts/suite_calidad_nocturna.py
+
+# --- G    MONITOR DE ALERTAS (cada 5 min en ventana) ---
+*/5 0-23 * * 1-4 cd /opt/proy_heatmap_stock/proy_scrapping_detail && set -a && . ./.env && set +a && ./venv/bin/python3 monitor_alertas.py
+*/5 0-16 * * 5    cd /opt/proy_heatmap_stock/proy_scrapping_detail && set -a && . ./.env && set +a && ./venv/bin/python3 monitor_alertas.py
+ ```

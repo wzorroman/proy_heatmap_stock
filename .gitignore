@@ -186,3 +186,4 @@ proy_heatmap/LOGS/*
 proy_scrapping_detail/venv/*
 .agents/*
 skills-lock.json
+/tmp/scraper_live_tradingview_v5.lock
