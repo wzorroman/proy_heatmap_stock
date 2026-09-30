@@ -7,8 +7,9 @@
       </thead>
       <tbody>
         {% for row in rows %}
-        <tr>
-          {% for c in row %}
+        {% set fila = row if (row is mapping and row.cells is defined) else {"cells": row} %}
+        <tr{% if fila.clase %} class="{{ fila.clase }}"{% endif %}>
+          {% for c in fila.cells %}
             {% if c is mapping %}
               <td class="{{ c.clase|default('') }}">{{ c.texto }}</td>
             {% else %}

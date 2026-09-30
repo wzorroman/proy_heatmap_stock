@@ -1,0 +1,52 @@
+<article class="card card-trading">
+  <h2>Screener 15 min</h2>
+  <p class="nota">Acciones equity · {{ nota_extra }} (total {{ total }})</p>
+  <div class="screener-table">
+    <table class="tabla">
+      <thead>
+        <tr>
+          <th>Símbolo</th>
+          {% if not compact %}
+          <th class="num">Close</th>
+          <th class="num">VWAP</th>
+          {% endif %}
+          <th class="num">Dist VWAP</th>
+          <th class="num">RSI15</th>
+          <th class="num">ADX15</th>
+          <th class="num">Change</th>
+          <th class="num">Vol ratio</th>
+          <th>Señal</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in filas %}
+        <tr class="screener-row" data-symbol="{{ r.symbol }}"
+            hx-get="/partials/velas_15m?symbol={{ r.symbol|urlencode }}"
+            hx-target="#trading-velas-card"
+            hx-swap="innerHTML">
+          <td class="tsym">
+            <span class="sym">
+              {% if r.logo %}
+              <img class="slogo" src="{{ r.logo }}" alt="" loading="lazy">
+              {% else %}
+              <span class="slogo slogo-empty" aria-hidden="true"></span>
+              {% endif %}
+              {{ r.symbol.split(":")[-1] }}
+            </span>
+          </td>
+          {% if not compact %}
+          <td class="num">{{ "%.2f"|format(r.close) if r.close else "—" }}</td>
+          <td class="num">{{ "%.2f"|format(r.vwap) if r.vwap else "—" }}</td>
+          {% endif %}
+          <td class="num {{ 'pos' if r.dist_vwap is not none and r.dist_vwap > 0 else ('neg' if r.dist_vwap is not none and r.dist_vwap < 0 else '') }}">{{ "%+.2f"|format(r.dist_vwap) if r.dist_vwap is not none else "—" }}%</td>
+          <td class="num">{{ "%.1f"|format(r.rsi_15) if r.rsi_15 else "—" }}</td>
+          <td class="num">{{ "%.1f"|format(r.adx_15) if r.adx_15 else "—" }}</td>
+          <td class="num {{ 'pos' if r.change_pct is not none and r.change_pct > 0 else ('neg' if r.change_pct is not none and r.change_pct < 0 else '') }}">{{ "%+.2f"|format(r.change_pct) if r.change_pct is not none else "—" }}%</td>
+          <td class="num">{{ "%.2f"|format(r.vol_ratio) if r.vol_ratio else "—" }}</td>
+          <td><span class="zona zona-sm zona-{{ r.signal }}">{{ 'BUY' if r.signal == 'COMPRAR' else ('SELL' if r.signal == 'VENDER' else 'NEUTRAL') }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</article>

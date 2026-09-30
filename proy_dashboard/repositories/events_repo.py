@@ -21,6 +21,7 @@ class EventsRepository(BaseRepository):
         self,
         country: Optional[str] = None,
         importance_min: Optional[int] = None,
+        importance: Optional[int] = None,
         since: Optional[datetime] = None,
         until: Optional[datetime] = None,
         limit: int = 200,
@@ -33,6 +34,9 @@ class EventsRepository(BaseRepository):
         if importance_min is not None:
             condiciones.append("importance >= %s")
             params.append(int(importance_min))
+        if importance is not None:
+            condiciones.append("importance = %s")
+            params.append(int(importance))
         if since is not None:
             condiciones.append("event_timestamp >= %s")
             params.append(since)
@@ -46,6 +50,14 @@ class EventsRepository(BaseRepository):
         sql += " ORDER BY event_timestamp LIMIT %s"
         params.append(int(limit))
         return self.fetch(sql, tuple(params))
+
+    def paises(self) -> list[str]:
+        """Códigos ISO-2 de país presentes en el calendario, ordenados."""
+        filas = self.fetch(
+            "SELECT DISTINCT country FROM fact_economic_event "
+            "WHERE country IS NOT NULL AND country <> '' ORDER BY country"
+        )
+        return [f["country"] for f in filas]
 
     def max_timestamp(self) -> Optional[datetime]:
         row = self.fetch_one("SELECT max(event_timestamp) AS ts FROM fact_economic_event")

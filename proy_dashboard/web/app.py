@@ -19,7 +19,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.requests import Request
 
-from api.routers import events, health, heatmap, indicators, momentum, risk, score
+from api.routers import events, health, heatmap, indicators, momentum, risk, score, trading15m
 from core.container import Container
 from core.logging_config import get_logger, setup_global_logging
 from core.settings import get_settings
@@ -59,7 +59,8 @@ app = FastAPI(
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 for _router in (health.router, score.router, momentum.router, heatmap.router,
-                indicators.router, events.router, risk.router, views.router):
+                indicators.router, events.router, risk.router, trading15m.router,
+                views.router):
     app.include_router(_router)
 
 

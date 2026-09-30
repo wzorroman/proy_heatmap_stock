@@ -1,0 +1,15 @@
+<article class="card">
+  <h2>{{ titulo }}</h2>
+  <div id="{{ chart_id }}" class="chart" style="height: {{ altura }}px;"></div>
+  <div class="score-interp">
+    <div class="score-interp-head">
+      <span class="zona zona-sm zona-{{ zona }}">{{ zona }}</span>
+      <span class="si-stat">Media <b>{{ media if media is not none else "—" }}</b></span>
+      <span class="si-stat">Percentil <b>{{ percentil if percentil is not none else "—" }}</b></span>
+      <span class="si-stat si-compra">{{ pct_compra }}% COMPRAR</span>
+      <span class="si-stat si-venta">{{ pct_venta }}% VENDER</span>
+    </div>
+    <p class="score-interp-text">{{ descripcion }}</p>
+  </div>
+  <script>window.renderChart("{{ chart_id }}", {{ option|tojson }});</script>
+</article>

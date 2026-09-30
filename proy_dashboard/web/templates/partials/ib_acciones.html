@@ -1,0 +1,47 @@
+<article class="card card-trading">
+  <h2>Rango inicial — por acción <span class="ib-time">09:30–10:00 NY</span></h2>
+  <p class="nota">{{ n_rupturas }} rupturas de {{ total }} evaluadas · ventana de {{ ib_minutos }} min</p>
+  <div class="screener-table">
+    <table class="tabla">
+      <thead>
+        <tr>
+          <th>Símbolo</th>
+          <th class="num">IB low</th>
+          <th class="num">IB high</th>
+          <th class="num">Close</th>
+          <th class="num">Fuerza</th>
+          <th class="num">Hora</th>
+          <th>Ruptura</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in filas %}
+        <tr class="screener-row" data-symbol="{{ r.symbol }}"
+            hx-get="/partials/velas_15m?symbol={{ r.symbol|urlencode }}"
+            hx-target="#trading-velas-card"
+            hx-swap="innerHTML">
+          <td class="tsym">
+            <span class="sym">
+              {% if r.logo %}
+              <img class="slogo" src="{{ r.logo }}" alt="" loading="lazy">
+              {% else %}
+              <span class="slogo slogo-empty" aria-hidden="true"></span>
+              {% endif %}
+              {{ r.ticker }}
+            </span>
+          </td>
+          <td class="num">{{ "%.2f"|format(r.ib_low) if r.ib_low else "—" }}</td>
+          <td class="num">{{ "%.2f"|format(r.ib_high) if r.ib_high else "—" }}</td>
+          <td class="num">{{ "%.2f"|format(r.close) if r.close else "—" }}</td>
+          <td class="num {{ 'pos' if r.ruptura == 'ALCISTA' else ('neg' if r.ruptura == 'BAJISTA' else '') }}">{% if r.fuerza_pct is not none %}{{ "%+.2f"|format(r.fuerza_pct) }}%{% else %}—{% endif %}</td>
+          <td class="num">{{ r.hora or "—" }}</td>
+          <td>{% if r.ruptura %}<span class="zona zona-sm zona-{{ 'COMPRAR' if r.ruptura == 'ALCISTA' else ('VENDER' if r.ruptura == 'BAJISTA' else 'NEUTRAL') }}">{{ 'UP' if r.ruptura == 'ALCISTA' else ('DOWN' if r.ruptura == 'BAJISTA' else 'IN') }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+        {% if not filas %}
+        <tr><td colspan="7" class="muted">Sin datos de rango inicial.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</article>

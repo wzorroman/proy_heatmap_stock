@@ -1,0 +1,16 @@
+<article class="card card-trading" data-symbol="{{ symbol }}">
+  <h2>Velas 15m <span class="velas-symbol-badge">{{ symbol }}</span></h2>
+  {% if sin_datos %}
+    <p class="muted">Sin datos 15m suficientes para {{ symbol }}.</p>
+  {% else %}
+    <div class="precio-meta">
+      <span class="zona zona-{{ signal }}">{{ signal }}</span>
+      <span class="meta-item"><span class="meta-label">Close</span><span class="meta-value">{{ ultimo.close }}</span></span>
+      <span class="meta-item"><span class="meta-label">VWAP</span><span class="meta-value">{{ "%.2f"|format(ultimo.vwap) if ultimo.vwap else "—" }}</span></span>
+      <span class="meta-item"><span class="meta-label">Vol ratio</span><span class="meta-value">{{ "%.2f"|format(ultimo.vol_ratio) if ultimo.vol_ratio else "—" }}</span></span>
+      <span class="meta-item"><span class="meta-label">RSI15</span><span class="meta-value">{{ "%.1f"|format(ultimo.rsi_15) if ultimo.rsi_15 else "—" }}</span></span>
+      <span class="meta-item"><span class="meta-label">ADX15</span><span class="meta-value">{{ "%.1f"|format(ultimo.adx_15) if ultimo.adx_15 else "—" }}</span></span>
+    </div>
+    <div id="{{ chart_id }}" class="chart chart-fill" data-echart='{{ option|tojson }}'></div>
+  {% endif %}
+</article>

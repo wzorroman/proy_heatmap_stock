@@ -45,6 +45,65 @@ _NORM_KEY = {
     "change": "change_pct",
 }
 
+# Catálogo de análisis del histograma 15m: (clave, condición, sugerencia).
+# El texto NO repite métricas (media/percentil/%); esas van en las etiquetas.
+_ANALISIS_REGLAS = [
+    ("sin_datos", "n = 0", "Sin datos de score 15m para analizar."),
+    (
+        "compra_euforia",
+        "zona COMPRAR y %COMPRAR ≥ 80",
+        "Amplia mayoría alcista: mercado eufórico. Cuidado con sobrecompra; "
+        "considera asegurar ganancias.",
+    ),
+    (
+        "compra_fuerte",
+        "zona COMPRAR y %COMPRAR ≥ 60",
+        "Sesgo alcista claro: favorece largos. Espera retrocesos para entrar.",
+    ),
+    (
+        "compra_leve",
+        "zona COMPRAR y %COMPRAR < 60",
+        "Sesgo alcista leve: prefiere confirmación con volumen antes de entrar.",
+    ),
+    (
+        "venta_capitulacion",
+        "zona VENDER y %VENDER ≥ 80",
+        "Amplia mayoría bajista: posible capitulación. Cuidado con sobreventa y rebotes.",
+    ),
+    (
+        "venta_fuerte",
+        "zona VENDER y %VENDER ≥ 60",
+        "Sesgo bajista claro: favorece cortos o postura defensiva. "
+        "Espera rebotes para vender.",
+    ),
+    (
+        "venta_leve",
+        "zona VENDER y %VENDER < 60",
+        "Sesgo bajista leve: prefiere confirmación antes de vender.",
+    ),
+    (
+        "dividido",
+        "NEUTRAL con %COMPRAR ≥ 25 y %VENDER ≥ 25",
+        "Mercado dividido (bimodal): hay extremos en ambos lados; "
+        "opera selectivo, no el índice.",
+    ),
+    (
+        "inclina_alcista",
+        "NEUTRAL con (%COMPRAR − %VENDER) ≥ 15",
+        "Inclinación alcista dentro del rango: vigila ruptura al alza.",
+    ),
+    (
+        "inclina_bajista",
+        "NEUTRAL con (%VENDER − %COMPRAR) ≥ 15",
+        "Inclinación bajista dentro del rango: vigila ruptura a la baja.",
+    ),
+    (
+        "rango",
+        "NEUTRAL sin inclinación",
+        "Sin sesgo claro: mercado en rango. Espera ruptura para tomar posición.",
+    ),
+]
+
 
 class ScoreService:
     def __init__(
@@ -196,6 +255,43 @@ class ScoreService:
             return None
         return sum(promedios) / len(promedios)
 
+    def distribucion_15min(self, bins: int = 8) -> dict:
+        """Histograma del score 15m por acción + media, zonas y descripción."""
+        cfg = self._score15_cfg()
+        tf = str(cfg.get("tf", "15"))
+        last_n = int(cfg.get("last_n", 5))
+        rows = self.indicator_repo.fetch_recent(
+            tf, limit=max(last_n * 300, 1500), asset_classes=["equity"]
+        )
+        scores = self._scores_por_activo(rows, last_n)
+        return self.histograma_de_scores(scores, bins=bins, tf=tf, zonas=self._zonas())
+
+    def _scores_por_activo(self, rows: list[dict], last_n: int) -> list[float]:
+        por_asset: dict[int, list[dict]] = defaultdict(list)
+        for row in rows:  # vienen DESC: los últimos N por activo
+            if len(por_asset[row["asset_id"]]) < last_n:
+                por_asset[row["asset_id"]].append(row)
+
+        scores: list[float] = []
+        for filas in por_asset.values():
+            puntajes = []
+            for r in filas:
+                score, _ = self._puntuar(
+                    {
+                        "rsi": _f(r.get("rsi")),
+                        "adx": _f(r.get("adx")),
+                        "cci20": _f(r.get("cci20")),
+                        "bbpower": _f(r.get("bbpower")),
+                        "volume": None,
+                        "change": _f(r.get("change_pct")),
+                    }
+                )
+                if score is not None:
+                    puntajes.append(score)
+            if puntajes:
+                scores.append(sum(puntajes) / len(puntajes))
+        return scores
+
     # ── PASO 3 ───────────────────────────────────────────────────────────────
     def score_radar(self) -> tuple[Optional[float], list[RiesgoItem]]:
         cfg = self._radar_cfg()
@@ -248,6 +344,110 @@ class ScoreService:
         if norm_dir <= 3.5:
             return "BAJISTA"
         return "NEUTRO"
+
+    # ── histograma de score 15m (puro) ───────────────────────────────────────
+    @staticmethod
+    def tf_label(tf) -> str:
+        """Etiqueta de temporalidad: '15' → '15m', '5' → '5m', '1d' → '1D'."""
+        t = str(tf).lower()
+        if t in ("1", "1d", "d", "diario"):
+            return "1D"
+        return f"{t}m" if t.isdigit() else str(tf)
+
+    @staticmethod
+    def zona_de(score: Optional[float], zonas: dict) -> str:
+        if score is None:
+            return "NEUTRAL"
+        if score >= float(zonas["comprar"]):
+            return "COMPRAR"
+        if score <= float(zonas["vender"]):
+            return "VENDER"
+        return "NEUTRAL"
+
+    @staticmethod
+    def catalogo_analisis() -> list[dict]:
+        """Todas las combinaciones posibles del análisis (para revisión)."""
+        return [
+            {"clave": c, "condicion": cond, "texto": t}
+            for c, cond, t in _ANALISIS_REGLAS
+        ]
+
+    @staticmethod
+    def sugerencia_hist(media, percentil, n_compra, n_venta, n, zonas) -> str:
+        """Sugerencia accionable (sin repetir métricas ya mostradas en etiquetas)."""
+        return ScoreService._opcion_analisis(media, percentil, n_compra, n_venta, n, zonas)[
+            "texto"
+        ]
+
+    @staticmethod
+    def _opcion_analisis(media, percentil, n_compra, n_venta, n, zonas) -> dict:
+        pc = round(n_compra / n * 100) if n else 0
+        pv = round(n_venta / n * 100) if n else 0
+        zona = ScoreService.zona_de(media, zonas)
+
+        if not n:
+            clave = "sin_datos"
+        elif zona == "COMPRAR":
+            clave = "compra_euforia" if pc >= 80 else (
+                "compra_fuerte" if pc >= 60 else "compra_leve"
+            )
+        elif zona == "VENDER":
+            clave = "venta_capitulacion" if pv >= 80 else (
+                "venta_fuerte" if pv >= 60 else "venta_leve"
+            )
+        elif pc >= 25 and pv >= 25:
+            clave = "dividido"
+        elif pc - pv >= 15:
+            clave = "inclina_alcista"
+        elif pv - pc >= 15:
+            clave = "inclina_bajista"
+        else:
+            clave = "rango"
+
+        texto = next((r[2] for r in _ANALISIS_REGLAS if r[0] == clave), "")
+        return {"clave": clave, "texto": texto}
+
+    @staticmethod
+    def histograma_de_scores(scores, bins: int = 8, tf="15", zonas=None) -> dict:
+        """Construye el histograma (edges/counts) y métricas de contexto."""
+        zonas = zonas or {"comprar": 6.5, "vender": 4.5}
+        n = len(scores)
+        if n == 0:
+            return {
+                "edges": [], "counts": [], "n": 0, "media": None,
+                "percentil": None, "tf_label": ScoreService.tf_label(tf),
+                "pct_compra": 0, "pct_venta": 0, "zona": "NEUTRAL",
+                "descripcion": ScoreService.sugerencia_hist(0, 0, 0, 0, 0, zonas),
+            }
+
+        lo, hi = min(scores), max(scores)
+        if hi == lo:
+            hi = lo + 1.0
+        ancho = (hi - lo) / bins
+        counts = [0] * bins
+        for v in scores:
+            counts[min(bins - 1, int((v - lo) / ancho))] += 1
+        edges = [lo + i * ancho for i in range(bins + 1)]
+
+        media = sum(scores) / n
+        percentil = round(sum(1 for s in scores if s <= media) / n * 100)
+        n_compra = sum(1 for s in scores if s >= zonas["comprar"])
+        n_venta = sum(1 for s in scores if s <= zonas["vender"])
+
+        return {
+            "edges": edges,
+            "counts": counts,
+            "n": n,
+            "media": round(media, 2),
+            "percentil": percentil,
+            "tf_label": ScoreService.tf_label(tf),
+            "pct_compra": round(n_compra / n * 100),
+            "pct_venta": round(n_venta / n * 100),
+            "zona": ScoreService.zona_de(media, zonas),
+            "descripcion": ScoreService.sugerencia_hist(
+                round(media, 2), percentil, n_compra, n_venta, n, zonas
+            ),
+        }
 
     # ── riesgo: gauges e interpretación FX/Macro ─────────────────────────────
     def riesgo_gauges(self) -> list[dict]:

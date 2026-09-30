@@ -1,0 +1,12 @@
+<article class="card">
+  <h2>{{ titulo }}</h2>
+  <ul class="health-list">
+    {% for r in rows %}
+    <li class="health-item">
+      <span class="health-mod">{{ r.modulo }}</span>
+      <span class="estado {{ r.estado_clase }}">{{ r.estado }}</span>
+      <span class="health-detalle">{{ r.detalle }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+</article>

@@ -2,16 +2,19 @@
 
 {% block content %}
 <section class="grid">
-  {# Fila 1: score + riesgo (4 cards de 3 columnas cada una) #}
-  <div class="cell tres" hx-get="/partials/header" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML">
+  {# Fila 1: score · termómetro · FX/Macro · histograma score 15m · health (3+2+3+2+2) · altura uniforme #}
+  <div class="cell tres fila1" hx-get="/partials/header" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML">
     <article class="card"><p class="muted">Cargando score…</p></article>
   </div>
-  <div class="cell tres" hx-get="/partials/riesgo_gauges" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
-  <div class="cell tres" hx-get="/partials/riesgo_fx" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
+  <div class="cell dos fila1" hx-get="/partials/riesgo_gauges" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
+  <div class="cell tres fila1" hx-get="/partials/riesgo_fx" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
+  <div class="cell dos fila1" hx-get="/partials/score_15m" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML">
+    <article class="card"><p class="muted">Cargando histograma de score 15m…</p></article>
+  </div>
   {# Riesgo intermarket (divergente) deshabilitado: duplica el Termómetro de Riesgo.
   <div class="cell tres" hx-get="/partials/risk" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
   #}
-  <div class="cell tres" hx-get="/partials/health" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
+  <div class="cell dos fila1" hx-get="/partials/health" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
 
   {# Fila: Precio QQQ / SPY / ORO con SMA20/50 + señal y recomendaciones #}
   <div class="cell wide" hx-get="/partials/precios" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
@@ -27,8 +30,31 @@
   <div class="cell fill" hx-get="/partials/sectors" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
   <div class="cell fill" hx-get="/partials/sector_risk" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
 
-  <div class="cell" hx-get="/partials/alcistas" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
-  <div class="cell" hx-get="/partials/bajistas" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
+  {# Fila Alcistas / Bajistas / Divergencias 15m (5 + 5 + 2) #}
+  <div class="cell cinco" hx-get="/partials/alcistas" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
+  <div class="cell cinco" hx-get="/partials/bajistas" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
+  <div class="cell dos" hx-get="/partials/divergencia" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML">
+    <article class="card"><p class="muted">Cargando divergencias 15m…</p></article>
+  </div>
+
+  {# Fila Screener 15 min: screener (5) + rango inicial por acción (4) + confluencia (3) #}
+  <div class="cell cinco" hx-get="/partials/screener_15m?compact=1" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML">
+    <article class="card"><p class="muted">Cargando screener 15m…</p></article>
+  </div>
+  <div class="cell cuarto altura-screener" hx-get="/partials/ib_acciones" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML">
+    <article class="card"><p class="muted">Cargando rango inicial por acción…</p></article>
+  </div>
+  <div class="cell tres altura-screener" hx-get="/partials/confluencia" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML">
+    <article class="card"><p class="muted">Cargando confluencia…</p></article>
+  </div>
+
+  {# Fila Velas + Mapa de calor 15m: velas 15m (7) + sectorial 15m (5) #}
+  <div class="cell siete" id="trading-velas-card" hx-get="/partials/velas_15m" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML">
+    <article class="card"><p class="muted">Cargando velas 15m…</p></article>
+  </div>
+  <div class="cell cinco fill" hx-get="/partials/sector_15m" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML">
+    <article class="card"><p class="muted">Cargando mapa de calor 15m…</p></article>
+  </div>
 
   <div class="cell" hx-get="/partials/momentum" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
   <div class="cell" hx-get="/partials/change_rsi" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
@@ -44,7 +70,11 @@
   <div class="cell" hx-get="/partials/volume" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
   <div class="cell" hx-get="/partials/range52w" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
 
-  <div class="cell calendar" hx-get="/partials/calendar" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
+  <div class="cell calendar" id="calendar-card"
+       hx-get="/partials/calendar"
+       hx-trigger="load, every {{ refresh_ms }}ms"
+       hx-include="#cal-pais, #cal-nivel"
+       hx-swap="innerHTML"></div>
 
   {# Paneles sin histórico suficiente (placeholders honestos) #}
   {% for titulo, motivo in placeholders %}

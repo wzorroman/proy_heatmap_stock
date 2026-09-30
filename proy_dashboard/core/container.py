@@ -16,6 +16,7 @@ from core.logging_config import get_logger
 from core.settings import Settings, get_settings
 from db.postgresql_connection import PostgreSQLConnector
 from repositories import (
+    Bar15mRepository,
     EventsRepository,
     HeatmapRepository,
     IndicatorTfRepository,
@@ -24,12 +25,18 @@ from repositories import (
     SeriesRepository,
     SessionRepository,
 )
+from services.bar_15m_service import Bar15mService
+from services.confluencia_service import ConfluenciaService
+from services.divergencia_service import DivergenciaService
 from services.event_service import EventService
 from services.health_service import HealthService
 from services.heatmap_service import HeatmapService
 from services.indicator_service import IndicatorService
+from services.initial_balance_service import InitialBalanceService
 from services.momentum_service import MomentumService
 from services.precio_service import PrecioService
+from services.screener_15m_service import Screener15mService
+from services.sector_15m_service import Sector15mService
 from services.score_service import ScoreService
 from services.session_service import SessionService
 
@@ -49,6 +56,7 @@ class Container:
     series_repo: Optional[SeriesRepository] = None
     indicator_repo: Optional[IndicatorTfRepository] = None
     session_repo: Optional[SessionRepository] = None
+    bar_repo: Optional[Bar15mRepository] = None
 
     # servicios (negocio)
     score_service: Optional[ScoreService] = None
@@ -59,6 +67,12 @@ class Container:
     event_service: Optional[EventService] = None
     session_service: Optional[SessionService] = None
     health_service: Optional[HealthService] = None
+    bar_15m_service: Optional[Bar15mService] = None
+    screener_15m_service: Optional[Screener15mService] = None
+    confluencia_service: Optional[ConfluenciaService] = None
+    initial_balance_service: Optional[InitialBalanceService] = None
+    sector_15m_service: Optional[Sector15mService] = None
+    divergencia_service: Optional[DivergenciaService] = None
 
     name: str = field(default="container")
 
@@ -84,6 +98,7 @@ class Container:
         self.series_repo = SeriesRepository(self.connector)
         self.indicator_repo = IndicatorTfRepository(self.connector)
         self.session_repo = SessionRepository(self.connector)
+        self.bar_repo = Bar15mRepository(self.connector)
 
         self.score_service = ScoreService(
             latest_tick_repo=self.latest_tick_repo,
@@ -109,6 +124,22 @@ class Container:
             self.events_repo,
             self.indicator_repo,
         )
+        self.bar_15m_service = Bar15mService(
+            self.bar_repo, self.latest_tick_repo, self.settings
+        )
+        self.screener_15m_service = Screener15mService(
+            self.bar_repo, self.latest_tick_repo, self.settings
+        )
+        self.confluencia_service = ConfluenciaService(
+            self.indicator_repo, self.latest_tick_repo, self.settings
+        )
+        self.initial_balance_service = InitialBalanceService(
+            self.bar_repo, self.latest_tick_repo, self.settings
+        )
+        self.sector_15m_service = Sector15mService(
+            self.screener_15m_service, self.latest_tick_repo, self.settings
+        )
+        self.divergencia_service = DivergenciaService(self.bar_repo, self.settings)
 
     # ── utilidades ──────────────────────────────────────────────────────────
     def logger(self, name: str) -> logging.Logger:

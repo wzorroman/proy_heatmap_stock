@@ -239,3 +239,47 @@ def test_calcular_desde_series_bucket(clean_env, empty_env_file, config_file):
     # A usa la fila más nueva del bucket (rsi=80)
     fila_a = next(d for d in detalle1 if d["asset_id"] == 1)
     assert fila_a["componentes"][0]["valor"] == 80.0
+
+
+# ── Histograma de score 15m (puro) ───────────────────────────────────────────
+def test_score_hist_tf_label():
+    assert ScoreService.tf_label("15") == "15m"
+    assert ScoreService.tf_label("5") == "5m"
+    assert ScoreService.tf_label("1d") == "1D"
+
+
+def test_score_hist_distribucion_y_descripcion():
+    scores = [8.0, 7.5, 7.0, 6.8, 6.6, 6.0, 5.0, 4.0]
+    dist = ScoreService.histograma_de_scores(
+        scores, bins=4, tf="15", zonas={"comprar": 6.5, "vender": 4.5}
+    )
+    assert dist["n"] == 8
+    assert sum(dist["counts"]) == 8
+    assert len(dist["edges"]) == 5
+    assert dist["tf_label"] == "15m"
+    assert dist["pct_compra"] >= 60
+    assert dist["media"] == 6.36
+    assert dist["zona"] == "NEUTRAL"
+    assert dist["descripcion"]
+
+
+def test_score_hist_vacio():
+    dist = ScoreService.histograma_de_scores([], bins=4)
+    assert dist["n"] == 0
+    assert dist["counts"] == []
+    assert dist["descripcion"]
+
+
+def test_score_hist_catalogo_y_seleccion():
+    claves = [c["clave"] for c in ScoreService.catalogo_analisis()]
+    assert "compra_euforia" in claves
+    assert "venta_capitulacion" in claves
+    assert "rango" in claves
+
+    zonas = {"comprar": 6.5, "vender": 4.5}
+    assert ScoreService._opcion_analisis(5.0, 50, 12, 12, 100, zonas)["clave"] == "rango"
+    assert ScoreService._opcion_analisis(7.0, 55, 65, 5, 100, zonas)["clave"] == "compra_fuerte"
+    assert ScoreService._opcion_analisis(2.0, 50, 2, 85, 100, zonas)["clave"] == "venta_capitulacion"
+    # el texto no repite métricas
+    op = ScoreService._opcion_analisis(5.0, 50, 12, 12, 100, zonas)
+    assert "%" not in op["texto"] and "Media" not in op["texto"]

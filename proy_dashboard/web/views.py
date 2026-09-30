@@ -13,7 +13,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
 from core.container import Container
-from core.timezone import get_tz, now_utc
+from core.timezone import ensure_utc, get_tz, now_utc
 from web import charts
 from web.logos import logo_url
 from web.templating import templates
@@ -30,6 +30,16 @@ def _bandera(codigo: str) -> str:
 
 def _container(request: Request) -> Container:
     return request.app.state.container
+
+
+def _fmt_hora_lima(iso: str) -> str:
+    """ISO UTC → hora local de Lima (America/Lima) legible: '30/09 15:34'."""
+    try:
+        dt = datetime.fromisoformat(iso)
+    except (TypeError, ValueError):
+        return iso
+    local = ensure_utc(dt).astimezone(get_tz("America/Lima"))
+    return local.strftime("%d/%m %H:%M")
 
 
 def _card(request: Request, titulo, chart_id, option, *, nota=None, altura=280, accent=None, fill=False):
@@ -296,7 +306,12 @@ def precios(request: Request):
     """Fila con las 3 tarjetas de precio (QQQ/SPY/ORO) + SMA20/50 + señal."""
     c = _container(request)
     tarjetas = c.precio_service.analisis_todas()
+    ib_simbolos = set(c.initial_balance_service.mercado_simbolos())
     for t in tarjetas:
+        t["ib"] = None
+        t["logo"] = logo_url(t["symbol"])
+        if t.get("symbol") in ib_simbolos and not t.get("sin_datos"):
+            t["ib"] = c.initial_balance_service.evaluar_symbol(t["symbol"])
         if t.get("sin_datos"):
             t["accent"] = charts.MUTED
             continue
@@ -335,7 +350,9 @@ def multiframe(request: Request):
     # Selección RSI 1D top con 5m y 15m alineados: ambos <40 o ambos >60.
     op_alto = float(c.settings.business("rsi", "oportunidad_alto", default=60))
     op_bajo = float(c.settings.business("rsi", "oportunidad_bajo", default=40))
-    simbolos = [p["symbol"] for p in c.heatmap_service.top_equity_rsi()]
+    puntos = c.heatmap_service.top_equity_rsi()
+    simbolos = [p["symbol"] for p in puntos]
+    rsi1d = {p["symbol"]: float(p["rsi"]) for p in puntos if p.get("rsi") is not None}
     rsi5 = {
         d["symbol"]: d["valor"]
         for d in c.indicator_service.por_indicador("rsi", "5", n=10000)
@@ -354,6 +371,7 @@ def multiframe(request: Request):
             or (rsi5[s] > op_alto and rsi15[s] > op_alto)
         )
     ]
+    categorias.sort(key=lambda s: rsi1d.get(s, 0.0), reverse=True)
     series = {
         "RSI 5m": [round(rsi5[s], 1) for s in categorias],
         "RSI 15m": [round(rsi15[s], 1) for s in categorias],
@@ -372,12 +390,16 @@ def multiframe(request: Request):
 
 
 @router.get("/calendar", response_class=HTMLResponse)
-def calendar(request: Request):
-    """Calendario de HOY: eventos ya pasados y por venir, de mayor importancia."""
+def calendar(request: Request, pais: str | None = None, nivel: str | None = None):
+    """Calendario de HOY: eventos ya pasados y por venir, filtrable por país e importancia."""
     c = _container(request)
-    eventos = c.event_service.eventos_del_dia()
+    pais_def = str(c.settings.business("events", "today_country", default="ALL") or "ALL")
+    nivel_def = str(c.settings.business("events", "today_importance_level", default=1))
+    pais_sel = (pais or pais_def).upper()
+    nivel_sel = (nivel or nivel_def).lower()
+
+    eventos = c.event_service.eventos_del_dia(country=pais_sel, nivel=nivel_sel)
     tz = get_tz(c.settings.timezone)
-    umbral = c.settings.business("events", "today_importance_min", default=1)
     rows = []
     for e in eventos:
         ts = datetime.fromisoformat(e["event_timestamp"]).astimezone(tz)
@@ -389,24 +411,44 @@ def calendar(request: Request):
         pais = e["country"] or ""
         pais_txt = f"{_bandera(pais)} {pais}".strip()
         rows.append(
-            [
-                {"texto": ts.strftime("%d/%m")},
-                {"texto": ts.strftime("%H:%M")},
-                {"texto": pais_txt},
-                {"texto": e["title"] or ""},
-                {"texto": imp_txt, "clase": imp_cls},
-                {"texto": e["actual"] or "—", "clase": sorp_cls},
-                {"texto": e["forecast"] or "—", "clase": "muted"},
-                {"texto": f"{sorp:+.1f}%" if sorp is not None else "—", "clase": sorp_cls},
-            ]
+            {
+                "clase": "pasado" if e.get("pasado") else "",
+                "cells": [
+                    {"texto": ts.strftime("%d/%m")},
+                    {"texto": ts.strftime("%H:%M")},
+                    {"texto": pais_txt},
+                    {"texto": e["title"] or ""},
+                    {"texto": imp_txt, "clase": imp_cls},
+                    {"texto": e["actual"] or "—", "clase": sorp_cls},
+                    {"texto": e["forecast"] or "—", "clase": "muted"},
+                    {"texto": f"{sorp:+.1f}%" if sorp is not None else "—", "clase": sorp_cls},
+                ],
+            }
         )
     if not rows:
-        rows = [["—", "—", "—", "Sin eventos relevantes hoy", "", "", "", ""]]
+        rows = [
+            {
+                "clase": "",
+                "cells": ["—", "—", "—", "Sin eventos para el filtro", "", "", "", ""],
+            }
+        ]
+
+    niveles = [
+        ("todos", "Todos"),
+        ("1", "Nivel 1 · alta"),
+        ("2", "Nivel 2 · media"),
+        ("3", "Nivel 3 · baja"),
+    ]
+    paises = [("ALL", "Todos")] + [
+        (p, f"{_bandera(p)} {p}") for p in c.event_service.paises()
+    ]
+    nivel_txt = dict(niveles).get(nivel_sel, "Todos")
+    pais_txt = dict(paises).get(pais_sel, pais_sel)
     return templates.TemplateResponse(
         request,
-        "partials/card_table.html",
+        "partials/calendar.html",
         {
-            "titulo": f"Calendario de hoy · importancia ≥ {umbral} ({len(eventos)})",
+            "titulo": f"Calendario de hoy · {nivel_txt} · {pais_txt} ({len(eventos)})",
             "headers": [
                 "Fecha",
                 f"Hora {tz.key.split('/')[-1]}",
@@ -418,6 +460,10 @@ def calendar(request: Request):
                 "Sorpresa",
             ],
             "rows": rows,
+            "paises": paises,
+            "pais_sel": pais_sel,
+            "niveles": niveles,
+            "nivel_sel": nivel_sel,
         },
     )
 
@@ -451,6 +497,199 @@ def _pos52(precio, low, high):
     if high == low:
         return "—"
     return f"{(precio - low) / (high - low) * 100:.0f}%"
+
+
+def _top_screener_symbols(container, preferido: str | None = None) -> list[str]:
+    """Devuelve hasta 3 símbolos del screener: preferido primero, luego top screener."""
+    todas = container.screener_15m_service.scan()
+    accionables = [f for f in todas if f.get("signal") in ("COMPRAR", "VENDER")]
+    ordenados = (accionables + [f for f in todas if f not in accionables]) if accionables else todas
+    vistos = set()
+    salida = []
+    if preferido:
+        salida.append(preferido.upper().strip())
+        vistos.add(preferido.upper().strip())
+    for f in ordenados:
+        sym = f["symbol"].upper().strip()
+        if sym not in vistos:
+            salida.append(sym)
+            vistos.add(sym)
+        if len(salida) >= 3:
+            break
+    while len(salida) < 3:
+        fallback = container.settings.business("trading_15m", "default_symbol", default="NASDAQ:NVDA")
+        if fallback.upper().strip() not in vistos:
+            salida.append(fallback.upper().strip())
+            vistos.add(fallback.upper().strip())
+        else:
+            break
+    return salida
+
+
+@router.get("/velas_15m", response_class=HTMLResponse)
+def velas_15m(request: Request, symbol: str | None = None):
+    """Gráfico único de velas 15m para el símbolo seleccionado del screener."""
+    c = _container(request)
+    symbol = _top_screener_symbols(c, preferido=symbol)[0]
+    data = c.bar_15m_service.analyze(symbol)
+    chart_id = "chart-velas-15m"
+    if data.get("sin_datos"):
+        return templates.TemplateResponse(
+            request,
+            "partials/velas_15m.html",
+            {"symbol": symbol, "sin_datos": True, "chart_id": chart_id, "option": {}},
+        )
+    return templates.TemplateResponse(
+        request,
+        "partials/velas_15m.html",
+        {
+            "symbol": symbol,
+            "sin_datos": False,
+            "chart_id": chart_id,
+            "signal": data["signal"],
+            "ultimo": data["ultimo"],
+            "option": charts.candlestick_option(data["barras"], signal=data["signal"]),
+        },
+    )
+
+
+def _screener_filas(container) -> tuple[list[dict], str, int]:
+    """Selección única de filas del screener (compartida con confluencia)."""
+    todas = container.screener_15m_service.scan()
+    accionables = [f for f in todas if f.get("signal") in ("COMPRAR", "VENDER")]
+    if len(accionables) >= 5:
+        filas = accionables[:20]
+        nota_extra = f"mostrando {len(filas)} de {len(accionables)} con señal"
+    elif accionables:
+        vistos = {f["symbol"] for f in accionables}
+        extra = [f for f in todas if f["symbol"] not in vistos][: 15 - len(accionables)]
+        filas = accionables + extra
+        nota_extra = f"{len(accionables)} con señal + {len(extra)} top movimiento"
+    else:
+        filas = todas[:15]
+        nota_extra = "sin señales claras; mostrando top 15 por movimiento"
+    for f in filas:
+        f["logo"] = logo_url(f["symbol"])
+    return filas, nota_extra, len(todas)
+
+
+@router.get("/screener_15m", response_class=HTMLResponse)
+def screener_15m(request: Request, compact: bool = False):
+    """Ranking de oportunidades 15m en acciones (solo señales accionables)."""
+    c = _container(request)
+    filas, nota_extra, total = _screener_filas(c)
+    return templates.TemplateResponse(
+        request,
+        "partials/screener_15m.html",
+        {"filas": filas, "nota_extra": nota_extra, "total": total, "compact": compact},
+    )
+
+
+@router.get("/confluencia", response_class=HTMLResponse)
+def confluencia(request: Request):
+    """Heatmap de alineación 5m/15m/1D sobre los mismos símbolos del screener."""
+    c = _container(request)
+    filas_screener, _, _ = _screener_filas(c)
+    symbols = [f["symbol"] for f in filas_screener]
+    filas = c.confluencia_service.scan(symbols=symbols)
+    chart_id = "chart-confluencia"
+    option = charts.confluencia_option(filas) if filas else {}
+    return templates.TemplateResponse(
+        request,
+        "partials/confluencia.html",
+        {"chart_id": chart_id, "option": option, "n": len(filas)},
+    )
+
+
+@router.get("/ib_acciones", response_class=HTMLResponse)
+def ib_acciones(request: Request):
+    """Rango inicial (09:30–10:00 NY) por acción, en el mismo orden del screener."""
+    c = _container(request)
+    filas_screener, _, _ = _screener_filas(c)
+    symbols = [f["symbol"] for f in filas_screener]
+    ib_por_symbol = c.initial_balance_service.evaluar_lote(symbols)
+
+    filas = []
+    for symbol in symbols:
+        fila = ib_por_symbol.get(symbol)
+        if fila is None:
+            fila = {
+                "symbol": symbol,
+                "ticker": symbol.split(":")[-1],
+                "ib_low": None,
+                "ib_high": None,
+                "close": None,
+                "ruptura": None,
+                "fuerza_pct": None,
+                "hora": "",
+                "sin_datos": True,
+            }
+        fila["logo"] = logo_url(symbol)
+        filas.append(fila)
+
+    n_rupturas = sum(
+        1 for f in filas if f["ruptura"] in ("ALCISTA", "BAJISTA")
+    )
+    return templates.TemplateResponse(
+        request,
+        "partials/ib_acciones.html",
+        {
+            "filas": filas,
+            "total": len(filas),
+            "n_rupturas": n_rupturas,
+            "ib_minutos": c.initial_balance_service.ib_minutos(),
+        },
+    )
+
+
+@router.get("/sector_15m", response_class=HTMLResponse)
+def sector_15m(request: Request):
+    """Mapa de calor del cambio medio 15m por sector."""
+    c = _container(request)
+    sectores = c.sector_15m_service.por_sector()
+    return _card(
+        request,
+        "Mapa de calor 15m por sector",
+        "chart-sector15m",
+        charts.sector_15m_option(sectores),
+        nota=f"{len(sectores)} sectores · cambio medio 15m · área = nº de acciones",
+        fill=True,
+    )
+
+
+@router.get("/score_15m", response_class=HTMLResponse)
+def score_15m(request: Request):
+    """Histograma de la distribución del score 15m con descripción de contexto."""
+    c = _container(request)
+    dist = c.score_service.distribucion_15min()
+    return templates.TemplateResponse(
+        request,
+        "partials/score_15m.html",
+        {
+            "titulo": f"Distribución score {dist['tf_label']}",
+            "chart_id": "chart-score15m",
+            "option": charts.score_hist_option(dist),
+            "descripcion": dist["descripcion"],
+            "media": dist["media"],
+            "percentil": dist["percentil"],
+            "pct_compra": dist["pct_compra"],
+            "pct_venta": dist["pct_venta"],
+            "zona": dist["zona"],
+            "altura": 200,
+        },
+    )
+
+
+@router.get("/divergencia", response_class=HTMLResponse)
+def divergencia(request: Request):
+    """Alertas de divergencia precio / RSI 15m sobre el universo del screener."""
+    c = _container(request)
+    filas_screener, _, _ = _screener_filas(c)
+    symbols = [f["symbol"] for f in filas_screener]
+    data = c.divergencia_service.scan(symbols)
+    for f in data["filas"]:
+        f["logo"] = logo_url(f["symbol"])
+    return templates.TemplateResponse(request, "partials/divergencia.html", data)
 
 
 @router.get("/tabla_sector", response_class=HTMLResponse)
@@ -504,21 +743,22 @@ def health(request: Request):
     rows = []
     clase_estado = {"OK": "pos", "WARN": "neu", "ERROR": "neg"}
     for nombre, m in datos["modulos"].items():
-        detalle = m.get("detalle") or m.get("timestamp_utc") or m.get("edad_s")
+        detalle = m.get("detalle")
+        if detalle is None and m.get("timestamp_utc"):
+            detalle = _fmt_hora_lima(m["timestamp_utc"])
+        if detalle is None and m.get("edad_s") is not None:
+            detalle = f"hace {round(float(m['edad_s']) / 60)} min"
         estado = m.get("estado")
         rows.append(
-            [
-                nombre,
-                {"texto": estado, "clase": clase_estado.get(estado, "")},
-                {"texto": detalle if detalle is not None else "—", "clase": "muted"},
-            ]
+            {
+                "modulo": nombre,
+                "estado": estado,
+                "estado_clase": clase_estado.get(estado, ""),
+                "detalle": detalle if detalle is not None else "—",
+            }
         )
     return templates.TemplateResponse(
         request,
-        "partials/card_table.html",
-        {
-            "titulo": f"Health — {datos['status']}",
-            "headers": ["Módulo", "Estado", "Detalle"],
-            "rows": rows,
-        },
+        "partials/health.html",
+        {"titulo": f"Health — {datos['status']}", "rows": rows},
     )

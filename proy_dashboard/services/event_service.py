@@ -16,6 +16,20 @@ def _f(valor):
         return None
 
 
+# Niveles de importancia del calendario (TradingView): 1 = alta, 2 = media, 3 = baja.
+# El valor "todos" desactiva el filtro. Mapeo a la columna `importance` (-1/0/1).
+NIVEL_IMPORTANCIA = {"1": 1, "2": 0, "3": -1}
+
+
+def nivel_a_importancia(nivel) -> Optional[int]:
+    if nivel is None:
+        return None
+    nivel = str(nivel).strip().lower()
+    if nivel in ("", "todos", "all"):
+        return None
+    return NIVEL_IMPORTANCIA.get(nivel)
+
+
 class EventService:
     def __init__(self, events_repo, settings: Settings) -> None:
         self.events_repo = events_repo
@@ -67,10 +81,20 @@ class EventService:
         )
         return [self._a_dict(r, ahora) for r in rows]
 
-    def eventos_del_dia(self, importance_min: Optional[int] = None) -> list[dict]:
-        """Eventos de HOY (zona de mercado), ya pasados y por venir, de mayor importancia."""
-        if importance_min is None:
-            importance_min = int(self._cfg("today_importance_min", 1))
+    def eventos_del_dia(
+        self, country: Optional[str] = None, nivel: Optional[str] = None
+    ) -> list[dict]:
+        """Eventos de HOY (zona de mercado), ya pasados y por venir.
+
+        `country`: ISO-2 o "ALL" (todos). `nivel`: "todos" | "1" (alta) |
+        "2" (media) | "3" (baja). Por defecto, los de mayor importancia.
+        """
+        if country is None:
+            country = self._cfg("today_country", "ALL")
+        if nivel is None:
+            nivel = self._cfg("today_importance_level", 1)
+        importancia = nivel_a_importancia(nivel)
+
         tz = get_tz(self.settings.timezone)
         ahora = now_utc()
         hoy_local = ahora.astimezone(tz).date()
@@ -78,12 +102,17 @@ class EventService:
         fin = inicio + timedelta(days=1)
 
         rows = self.events_repo.fetch_eventos(
-            importance_min=importance_min,
+            country=country,
+            importance=importancia,
             since=inicio,
             until=fin,
             limit=200,
         )
         return [self._a_dict(r, ahora) for r in rows]
+
+    def paises(self) -> list[str]:
+        """Países disponibles en el calendario (ISO-2)."""
+        return self.events_repo.paises()
 
     def sorpresas(self, country: Optional[str] = None, importance_min: Optional[int] = None) -> list[dict]:
         rows = self.events_repo.fetch_eventos(

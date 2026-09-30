@@ -1,0 +1,26 @@
+<article class="card card-trading">
+  <h2>Divergencia precio / RSI <span class="ib-time">15m</span></h2>
+  <p class="nota">{{ filas|length }} alertas de {{ total }} acciones · precio vs RSI</p>
+  <div class="div-list">
+    {% for d in filas %}
+    <div class="div-item" data-symbol="{{ d.symbol }}"
+         hx-get="/partials/velas_15m?symbol={{ d.symbol|urlencode }}"
+         hx-target="#trading-velas-card"
+         hx-swap="innerHTML">
+      <span class="sym">
+        {% if d.logo %}
+        <img class="slogo" src="{{ d.logo }}" alt="" loading="lazy">
+        {% else %}
+        <span class="slogo slogo-empty" aria-hidden="true"></span>
+        {% endif %}
+        {{ d.ticker }}
+      </span>
+      <span class="zona zona-sm zona-{{ 'VENDER' if d.tipo == 'BAJISTA' else 'COMPRAR' }}">{{ d.tipo }}</span>
+      <span class="div-meta">
+        P {{ "%+.2f"|format(d.precio_delta) }}% · RSI {{ "%.1f"|format(d.rsi1) }}→{{ "%.1f"|format(d.rsi2) }}
+      </span>
+    </div>
+    {% endfor %}
+    {% if not filas %}<p class="muted">Sin divergencias claras en el universo del screener.</p>{% endif %}
+  </div>
+</article>

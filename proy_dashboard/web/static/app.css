@@ -14,6 +14,7 @@
   --rojo-soft: rgba(248, 81, 73, 0.14);
   --amarillo: #d6a72c;
   --amarillo-soft: rgba(214, 167, 44, 0.14);
+  --azul: #58a6ff;
   --azul-soft: rgba(88, 166, 255, 0.14);
 }
 
@@ -83,18 +84,30 @@ body {
 .cell { grid-column: span 6; min-width: 0; }
 .cell.wide { grid-column: span 12; }
 .cell.calendar { grid-column: span 12; }
+.cell.uno { grid-column: span 1; }
+.cell.dos { grid-column: span 2; }
 .cell.tres { grid-column: span 3; }
+.cell.cuarto { grid-column: span 4; }
+.cell.cinco { grid-column: span 5; }
+.cell.seis { grid-column: span 6; }
+.cell.siete { grid-column: span 7; }
 
 /* Tarjeta que llena toda la altura de su celda (gráfico a altura completa) */
 .cell.fill { display: flex; }
 .cell.fill > .card { flex: 1 1 auto; display: flex; flex-direction: column; }
 .cell.fill > .card .chart { flex: 1 1 auto; min-height: 560px; }
 
+/* Fila 1: todas las tarjetas con la misma altura (la más alta, "Distribución score") */
+.fila1 { display: flex; }
+.fila1 > .card { flex: 1 1 auto; }
+
 @media (max-width: 1100px) {
   .cell.tres { grid-column: span 6; }
+  .cell.cinco { grid-column: span 6; }
 }
 @media (max-width: 900px) {
-  .cell, .cell.wide, .cell.calendar, .cell.tres { grid-column: span 12; }
+  .cell, .cell.wide, .cell.calendar,
+  .cell.uno, .cell.dos, .cell.tres, .cell.cuarto, .cell.cinco, .cell.seis, .cell.siete { grid-column: span 12; }
 }
 
 .card {
@@ -168,11 +181,166 @@ body {
 
 /* ── Tablas ───────────────────────────────────────────────────────────────── */
 .tabla-wrap { max-height: 340px; overflow: auto; }
+/* Health: filas (sin tabla), módulo como label destacable + estado/detalle */
+.health-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.health-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+}
+.health-mod {
+  font-weight: 800;
+  font-size: 0.72rem;
+  color: var(--text);
+  background: rgba(88, 166, 255, 0.12);
+  border: 1px solid rgba(88, 166, 255, 0.35);
+  border-radius: 6px;
+  padding: 1px 7px;
+}
+.health-item .estado { font-size: 0.72rem; }
+.health-detalle { font-size: 0.72rem; color: var(--muted); word-break: break-word; }
+
+/* Divergencia precio / RSI 15m */
+.div-list { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.div-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.div-item:hover { background: rgba(88, 166, 255, 0.10); border-color: var(--accent); }
+.div-item .sym { font-weight: 800; }
+.div-meta {
+  margin-left: auto;
+  font-size: 0.7rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+/* Interpretación debajo del gráfico de histograma */
+.score-interp {
+  margin: 8px 0 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.score-interp-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px 10px;
+  margin-bottom: 6px;
+}
+.si-stat { font-size: 0.68rem; color: var(--muted); letter-spacing: 0.2px; }
+.si-stat b { color: var(--text); font-weight: 800; }
+.si-compra { color: var(--verde); font-weight: 700; }
+.si-venta { color: var(--rojo); font-weight: 700; }
+.score-interp-text {
+  margin: 0;
+  font-size: 0.74rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+.screener-table { max-height: none; overflow: visible; }
+.screener-table .tabla { font-size: 0.7rem; border-collapse: separate; border-spacing: 0 3px; }
+.screener-table .tabla th,
+.screener-table .tabla td { padding: 6px 4px; border-bottom: none; vertical-align: middle; }
+.screener-table .tabla thead th {
+  font-size: 0.56rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  padding: 0 4px 5px;
+  background: transparent;
+  border-bottom: 1px solid var(--border);
+}
+.screener-table .tabla th.num,
+.screener-table .tabla td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.screener-table .tsym { font-weight: 800; color: var(--text); }
+.screener-table .sym { gap: 5px; align-items: center; white-space: nowrap; }
+.screener-table .tabla tbody tr.screener-row {
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.02);
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+.screener-table .tabla tbody tr.screener-row:nth-child(even) { background: rgba(255, 255, 255, 0.045); }
+.screener-table .tabla tbody tr.screener-row:hover { background: rgba(88, 166, 255, 0.10); }
+.screener-table .tabla tbody tr.screener-row.selected {
+  background: var(--azul-soft);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.screener-table .tabla tbody tr.screener-row.selected td { font-weight: 700; color: var(--text); }
+/* Etiqueta COMPRAR/VENDER compacta dentro del screener */
+.screener-table .zona-sm {
+  padding: 1px 6px;
+  font-size: 0.62rem;
+  border-radius: 5px;
+  letter-spacing: 0.2px;
+}
+
+/* ── Initial Balance (rango inicial 09:30–10:00 NY) ───────────────────────── */
+.ib-time {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 6px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  color: var(--amarillo);
+  background: var(--amarillo-soft);
+  border: 1px solid var(--amarillo);
+  vertical-align: middle;
+}
+/* Fila Trading 15 min: misma altura de card y de gráfico en las 3 columnas */
+.card-trading { display: flex; flex-direction: column; height: 100%; }
+.card-trading .screener-table { flex: 1 1 auto; }
+.card-trading .chart-fill { flex: 1 1 auto; width: 100%; min-height: 460px; }
+
+/* En la fila del screener, el alto lo manda el screener: rango inicial y
+   confluencia se anclan a ese alto para quedar perfectamente alineados. */
+@media (min-width: 1101px) {
+  .cell.altura-screener { position: relative; }
+  .cell.altura-screener > .card { position: absolute; inset: 0; overflow: hidden; }
+  .cell.altura-screener .screener-table { overflow-y: auto; min-height: 0; }
+  .cell.altura-screener .chart-fill { min-height: 0; }
+}
+
+/* Símbolo destacado sobre el título del gráfico de velas (estilo zona-NEUTRAL en azul) */
+.velas-symbol-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  color: var(--azul);
+  background: var(--azul-soft);
+  border: 1px solid var(--azul);
+  vertical-align: middle;
+  box-shadow: 0 0 10px rgba(88, 166, 255, 0.35);
+}
+
+/* Fila seleccionada del screener: estilos en bloque .screener-table (arriba) */
 .tabla { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
 .tabla th, .tabla td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
 .tabla thead th { color: var(--accent); position: sticky; top: 0; background: var(--panel-alt); z-index: 1; }
 .tabla tbody tr:hover { background: #1b2430; }
 .tabla td.pos, .tabla td.neg, .tabla td.neu { font-weight: 700; }
+
+/* Eventos ya ocurridos: presentes pero atenuados para diferenciarlos de los próximos */
+.tabla tbody tr.pasado { opacity: 0.6; }
+.tabla tbody tr.pasado:hover { opacity: 1; }
 
 /* ── Tabla de stocks por sector ───────────────────────────────────────────── */
 .ts-head {
@@ -198,6 +366,12 @@ body {
   flex-shrink: 0; background: rgba(255, 255, 255, 0.04);
 }
 .tlogo-empty { display: inline-block; background: #000; border: 1px solid var(--border); }
+/* Logo compacto del screener 15 min */
+.slogo {
+  width: 16px; height: 16px; border-radius: 3px; object-fit: contain;
+  flex-shrink: 0; background: rgba(255, 255, 255, 0.04);
+}
+.slogo-empty { display: inline-block; background: #000; border: 1px solid var(--border); }
 .tsym { font-weight: 700; }
 .tname {
   max-width: 300px; overflow: hidden; text-overflow: ellipsis;
@@ -230,11 +404,43 @@ body {
 /* ── Tarjetas de precio QQQ/SPY/ORO ───────────────────────────────────────── */
 .precios-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 16px;
 }
+@media (max-width: 1500px) { .precios-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 1100px) { .precios-grid { grid-template-columns: 1fr; } }
-.precio-meta { display: flex; align-items: center; gap: 10px; margin: 2px 0 8px; }
+/* Título de tarjeta de precio: icono + símbolo + subnombre en otro color */
+.precio-titulo { display: flex; align-items: center; gap: 8px; }
+.precio-logo {
+  width: 20px; height: 20px; border-radius: 4px; object-fit: contain;
+  flex-shrink: 0; background: rgba(255, 255, 255, 0.04);
+}
+.precio-icono { font-size: 1.05rem; line-height: 1; flex-shrink: 0; }
+.precio-sub { color: var(--azul); font-weight: 600; }
+.precio-titulo .muted { font-weight: 400; }
+/* Pastilla de rango inicial en las tarjetas de precio */
+.ib-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  border: 1px solid var(--border);
+  background: #1c242e;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.ib-badge.ib-alcista { color: var(--verde); border-color: var(--verde); background: var(--verde-soft); }
+.ib-badge.ib-bajista { color: var(--rojo); border-color: var(--rojo); background: var(--rojo-soft); }
+.ib-badge.ib-dentro { color: var(--amarillo); border-color: var(--amarillo); background: var(--amarillo-soft); }
+.ib-badge.ib-none { color: var(--muted); }
+.precio-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 2px 0 8px; }
+/* Etiqueta (clara/atenuada) vs valor (más claro/brillante) para contraste */
+.meta-item { display: inline-flex; align-items: baseline; gap: 4px; }
+.meta-label { color: #9fb3c8; font-weight: 500; font-size: 0.82rem; }
+.meta-value { color: #f2f7ff; font-weight: 700; }
 .recs { list-style: none; margin: 10px 0 0; padding: 0; }
 .recs li {
   font-size: 0.78rem; color: var(--muted);

@@ -45,7 +45,8 @@
   },
   "events": {
     "importance_min": 0,
-    "today_importance_min": 1,
+    "today_country": "ALL",
+    "today_importance_level": 1,
     "default_country": "ALL",
     "lookback_hours": 24,
     "lookahead_hours": 72
@@ -70,9 +71,10 @@
       "rango_ventana": true
     },
     "tarjetas": [
-      { "clave": "qqq", "titulo": "Precio QQQ (NASDAQ-100)", "symbol": "NASDAQ:QQQ" },
-      { "clave": "spy", "titulo": "Precio SPY (S&P 500)", "symbol": "AMEX:SPY" },
-      { "clave": "oro", "titulo": "Precio ORO (XAUUSD)", "symbol": "OANDA:XAUUSD" }
+      { "clave": "qqq", "titulo": "QQQ", "subtitulo": "(NASDAQ-100)", "icono": "📈", "symbol": "NASDAQ:QQQ" },
+      { "clave": "spy", "titulo": "SPY", "subtitulo": "(S&P 500)", "icono": "📈", "symbol": "AMEX:SPY" },
+      { "clave": "iwm", "titulo": "IWM", "subtitulo": "(Russell 2000)", "icono": "🏭", "symbol": "AMEX:IWM" },
+      { "clave": "oro", "titulo": "ORO", "subtitulo": "(XAUUSD)", "icono": "🥇", "icono_url": "/static/iconos_mercado/oro_lingote.svg", "symbol": "OANDA:XAUUSD" }
     ]
   },
   "tabla_sector": {
@@ -81,5 +83,23 @@
   },
   "sectores": {
     "timeframe": "1D"
+  },
+  "trading_15m": {
+    "default_symbol": "NASDAQ:NVDA",
+    "horas": 48,
+    "screener_horas": 48,
+    "stale_min": 60,
+    "rsi_sobrecompra": 70,
+    "rsi_sobreventa": 30,
+    "adx_min": 20,
+    "vol_ratio_min": 1.0,
+    "ib_minutos": 30,
+    "ib_horas": 48,
+    "ib_max_acciones": 15,
+    "ib_mercado_simbolos": ["AMEX:SPY", "NASDAQ:QQQ", "AMEX:IWM"],
+    "div_horas": 48,
+    "div_pivote_k": 2,
+    "div_rsi_min": 1.5,
+    "div_max": 15
   }
 }

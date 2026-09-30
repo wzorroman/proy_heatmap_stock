@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Lingote de oro">
+  <defs>
+    <linearGradient id="oro" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffe89a"/>
+      <stop offset="0.45" stop-color="#f6c531"/>
+      <stop offset="1" stop-color="#b8860b"/>
+    </linearGradient>
+  </defs>
+  <polygon points="8,24 56,24 64,46 0,46" fill="url(#oro)" stroke="#8a6400" stroke-width="2" stroke-linejoin="round"/>
+  <polygon points="8,24 56,24 51,31 13,31" fill="#fff6cf" opacity="0.75"/>
+  <polygon points="18,36 46,36 48,40 16,40" fill="#b8860b" opacity="0.35"/>
+</svg>

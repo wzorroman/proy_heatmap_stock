@@ -292,6 +292,7 @@ Notas:
   sudo chown -R appuser:appuser "/opt/DATOS_LIVE"
   sudo chown -R appuser:appuser "/opt/DATOS_LIVE_CALENDAR"
   sudo chown -R appuser:appuser "tmp/scraper_live_tradingview_v5.lock
+  sudo chown -R appuser:appuser "/opt/proy_heatmap_stock/proy_dashboard"
   
 
 ## 7. Script en crontab
@@ -330,4 +331,8 @@ CRON_TZ=America/New_York
 # --- G    MONITOR DE ALERTAS (cada 9 min en ventana) ---
 2-59/9 0-23 * * 1-4 cd /opt/proy_heatmap_stock/proy_scrapping_detail && set -a && . ./.env && set +a && ./venv/bin/python3 monitor_alertas.py
 2-59/9 0-16 * * 5    cd /opt/proy_heatmap_stock/proy_scrapping_detail && set -a && . ./.env && set +a && ./venv/bin/python3 monitor_alertas.py
+
+# --- proy_dashboard · score de mercado (cada 3 min)
+3-59/3 0-23 * * 1-4 /opt/proy_heatmap_stock/proy_dashboard/run_persist_score.sh --cycle
+3-59/3 0-16 * * 5   /opt/proy_heatmap_stock/proy_dashboard/run_persist_score.sh --cycle
  ```

@@ -1,5 +1,7 @@
 """Tests de la Fase 7 — web (Jinja2 + HTMX + ECharts)."""
 
+import re
+
 from fastapi.testclient import TestClient
 
 from web.app import app
@@ -74,12 +76,14 @@ def test_partial_calendario_es_tabla():
     assert "<table" in r.text
 
 
-def test_partial_health_es_tabla():
+def test_partial_health_es_lista():
     with _client() as client:
         r = client.get("/partials/health")
 
     assert "Health" in r.text
-    assert "Módulo" in r.text
+    assert "health-list" in r.text
+    assert "health-mod" in r.text
+    assert "health-detalle" in r.text
 
 
 def test_cards_riesgo_listas_y_sector():
@@ -107,6 +111,71 @@ def test_partial_precios_con_barras():
     assert r.text.count('class="metrica"') >= 6
     assert "SMA20 vs SMA50" in r.text
     assert "Rango 48h" in r.text
+
+
+def test_partial_screener_signal_en_ingles():
+    with _client() as client:
+        r = client.get("/partials/screener_15m", params={"compact": 1})
+
+    assert r.status_code == 200
+    # Etiqueta visible en inglés; la clase de color conserva COMPRAR/VENDER
+    assert ">BUY<" in r.text or ">SELL<" in r.text or ">NEUTRAL<" in r.text
+    assert ">COMPRAR<" not in r.text and ">VENDER<" not in r.text
+
+
+def test_partial_screener_una_sola_tabla():
+    with _client() as client:
+        r = client.get("/partials/screener_15m", params={"compact": 1})
+
+    assert r.status_code == 200
+    assert r.text.count('class="screener-table"') == 1
+    assert "screener-dual" not in r.text
+
+
+def test_confluencia_resalta_seleccion():
+    with _client() as client:
+        r = client.get("/partials/confluencia")
+
+    assert r.status_code == 200
+    assert "chart-confluencia" in r.text
+    # Estilo de resaltado del símbolo seleccionado en el screener
+    assert "emphasis" in r.text
+
+
+def test_ib_acciones_filas_seleccionables():
+    with _client() as client:
+        r = client.get("/partials/ib_acciones")
+
+    assert r.status_code == 200
+    # Misma clase/data que el screener → el resaltado se propaga solo
+    assert 'class="screener-row"' in r.text
+    assert "data-symbol=" in r.text
+
+
+def test_ib_acciones_mismo_orden_que_screener():
+    with _client() as client:
+        screener = client.get("/partials/screener_15m", params={"compact": 1}).text
+        ib = client.get("/partials/ib_acciones").text
+
+    syms_screener = re.findall(r'data-symbol="([^"]+)"', screener)
+    syms_ib = re.findall(r'data-symbol="([^"]+)"', ib)
+    assert syms_screener
+    assert syms_ib == syms_screener
+
+
+def test_layout_velas_junto_a_mapa_sectorial():
+    with _client() as client:
+        html = client.get("/").text
+
+    # Fila del screener: screener + rango inicial por acción + confluencia
+    assert 'hx-get="/partials/screener_15m?compact=1"' in html
+    assert 'hx-get="/partials/ib_acciones"' in html
+    assert 'hx-get="/partials/confluencia"' in html
+    # Fila de velas + mapa de calor 15m
+    assert 'hx-get="/partials/velas_15m"' in html
+    assert 'hx-get="/partials/sector_15m"' in html
+    # El card de velas es el target del screener/rango inicial
+    assert 'id="trading-velas-card"' in html
 
 
 def test_partial_tabla_sector():

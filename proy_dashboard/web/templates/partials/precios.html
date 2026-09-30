@@ -1,7 +1,18 @@
 <div class="precios-grid">
   {% for c in tarjetas %}
   <article class="card" style="--panel-accent: {{ c.accent }};">
-    <h2 class="tinted">{{ c.titulo }} — SMA20/SMA50</h2>
+    <h2 class="tinted precio-titulo">
+      {% if c.icono_url %}
+      <img class="precio-logo" src="{{ c.icono_url }}" alt="" loading="lazy">
+      {% elif c.logo %}
+      <img class="precio-logo" src="{{ c.logo }}" alt="" loading="lazy">
+      {% else %}
+      <span class="precio-icono" aria-hidden="true">{{ c.icono }}</span>
+      {% endif %}
+      {{ c.titulo }}
+      {% if c.subtitulo %}<span class="precio-sub">{{ c.subtitulo }}</span>{% endif %}
+      <span class="muted small">— SMA20/SMA50</span>
+    </h2>
 
     {% if c.sin_datos %}
     <p class="muted">Sin datos de precio para <code>{{ c.symbol }}</code>.</p>
@@ -9,6 +20,11 @@
     {% else %}
     <div class="precio-meta">
       <span class="zona zona-{{ c.signal }}">{{ c.signal }}</span>
+      {% if c.ib %}
+      <span class="ib-badge ib-{{ c.ib.ruptura|lower }}">IB {{ c.ib.ruptura }}{% if c.ib.hora %} · {{ c.ib.hora }}{% endif %}</span>
+      {% else %}
+      <span class="ib-badge ib-none">---</span>
+      {% endif %}
       <span class="muted small">Convicción {{ '%.0f'|format(c.signal_score) }}/100</span>
       <span class="muted small" style="margin-left:auto;">{{ c.symbol }}</span>
     </div>

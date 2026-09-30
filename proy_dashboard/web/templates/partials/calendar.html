@@ -1,0 +1,54 @@
+<article class="card">
+  <div class="ts-head">
+    <h2>{{ titulo }}</h2>
+    <div class="ts-filters">
+      <label class="ts-filter">
+        <span class="muted small">País</span>
+        <select id="cal-pais" name="pais"
+                hx-get="/partials/calendar"
+                hx-target="#calendar-card"
+                hx-swap="innerHTML"
+                hx-trigger="change"
+                hx-include="#cal-pais, #cal-nivel">
+          {% for code, label in paises %}
+          <option value="{{ code }}" {% if code == pais_sel %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="ts-filter">
+        <span class="muted small">Importancia</span>
+        <select id="cal-nivel" name="nivel"
+                hx-get="/partials/calendar"
+                hx-target="#calendar-card"
+                hx-swap="innerHTML"
+                hx-trigger="change"
+                hx-include="#cal-pais, #cal-nivel">
+          {% for value, label in niveles %}
+          <option value="{{ value }}" {% if value == nivel_sel %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <div class="tabla-wrap">
+    <table class="tabla">
+      <thead>
+        <tr>{% for h in headers %}<th>{{ h }}</th>{% endfor %}</tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr{% if row.clase %} class="{{ row.clase }}"{% endif %}>
+          {% for c in row.cells %}
+            {% if c is mapping %}
+              <td class="{{ c.clase|default('') }}">{{ c.texto }}</td>
+            {% else %}
+              <td>{{ c }}</td>
+            {% endif %}
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</article>

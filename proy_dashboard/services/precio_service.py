@@ -61,6 +61,9 @@ class PrecioService:
         base = {
             "clave": tarjeta.get("clave"),
             "titulo": tarjeta.get("titulo", symbol),
+            "subtitulo": tarjeta.get("subtitulo"),
+            "icono": tarjeta.get("icono"),
+            "icono_url": tarjeta.get("icono_url"),
             "symbol": symbol,
             "sin_datos": True,
         }
@@ -121,6 +124,9 @@ class PrecioService:
         return {
             "clave": tarjeta.get("clave"),
             "titulo": tarjeta.get("titulo", symbol),
+            "subtitulo": tarjeta.get("subtitulo"),
+            "icono": tarjeta.get("icono"),
+            "icono_url": tarjeta.get("icono_url"),
             "symbol": symbol,
             "sin_datos": False,
             "serie": serie,

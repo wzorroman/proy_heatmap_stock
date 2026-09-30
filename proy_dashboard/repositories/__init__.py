@@ -5,6 +5,7 @@ Todos los repositorios heredan de `BaseRepository` y reciben el
 """
 
 from repositories.base import BaseRepository
+from repositories.bar_15m_repo import Bar15mRepository
 from repositories.events_repo import EventsRepository
 from repositories.heatmap_repo import HeatmapRepository
 from repositories.indicator_repo import IndicatorTfRepository
@@ -22,4 +23,5 @@ __all__ = [
     "SeriesRepository",
     "IndicatorTfRepository",
     "SessionRepository",
+    "Bar15mRepository",
 ]

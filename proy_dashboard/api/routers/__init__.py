@@ -1,5 +1,5 @@
 """api/routers/__init__.py — routers JSON del dashboard."""
 
-from api.routers import events, health, heatmap, indicators, momentum, risk, score
+from api.routers import events, health, heatmap, indicators, momentum, risk, score, trading15m
 
-__all__ = ["health", "score", "momentum", "heatmap", "indicators", "events", "risk"]
+__all__ = ["health", "score", "momentum", "heatmap", "indicators", "events", "risk", "trading15m"]
