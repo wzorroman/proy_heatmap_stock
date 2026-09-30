@@ -1,0 +1,75 @@
+<article class="card">
+  <div class="ts-head">
+    <h2>
+      {% if q %}Búsqueda: “{{ q }}”{% else %}Stocks por sector — {{ sector_actual }}{% endif %}
+    </h2>
+    <div class="ts-filters">
+      <input class="ts-search" type="search" name="q" value="{{ q }}"
+             placeholder="Buscar símbolo…"
+             hx-get="/partials/tabla_sector"
+             hx-target="#tabla-sector-card"
+             hx-swap="innerHTML"
+             hx-trigger="keyup changed delay:300ms, search"
+             hx-include="#sector-select">
+      <label class="ts-filter">
+        <span class="muted small">Sector</span>
+        <select id="sector-select" name="sector"
+                hx-get="/partials/tabla_sector"
+                hx-target="#tabla-sector-card"
+                hx-swap="innerHTML"
+                hx-trigger="change">
+          {% for s in sectores %}
+          <option value="{{ s.sector }}" {% if s.sector == sector_actual %}selected{% endif %}>
+            {{ s.sector }} ({{ s.n }})
+          </option>
+          {% endfor %}
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <div class="tabla-wrap ts-wrap">
+    <table class="tabla">
+      <thead>
+        <tr>
+          <th>Símbolo</th>
+          <th>Símbolo completo</th>
+          <th class="num">Precio</th>
+          <th class="num">Cambio</th>
+          <th class="num">RSI</th>
+          <th class="num">ADX</th>
+          <th class="num">Volat.</th>
+          <th class="num">Pos.52s</th>
+          <th class="num">Cap.</th>
+          <th class="num">Vol/10d</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for f in filas %}
+        <tr>
+          <td>
+            <span class="sym">
+              {% if f.logo %}
+              <img class="tlogo" src="{{ f.logo }}" alt="" loading="lazy">
+              {% else %}
+              <span class="tlogo tlogo-empty" aria-hidden="true"></span>
+              {% endif %}
+              <span class="tsym">{{ f.ticker }}</span>
+            </span>
+          </td>
+          <td class="tsub">{{ f.symbol }}</td>
+          <td class="num">{{ f.precio }}</td>
+          <td class="num {% if f.cambio is not none and f.cambio >= 0 %}pos{% elif f.cambio is not none %}neg{% endif %}">{{ f.cambio_txt }}</td>
+          <td class="num">{{ f.rsi }}</td>
+          <td class="num">{{ f.adx }}</td>
+          <td class="num">{{ f.volat }}</td>
+          <td class="num">{{ f.pos52 }}</td>
+          <td class="num">{{ f.cap }}</td>
+          <td class="num">{{ f.vol }}</td>
+        </tr>
+        {% endfor %}
+        {% if not filas %}<tr><td colspan="10" class="muted">Sin resultados.</td></tr>{% endif %}
+      </tbody>
+    </table>
+  </div>
+</article>

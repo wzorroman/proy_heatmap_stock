@@ -1,0 +1,10 @@
+[project]
+name = "proy_dashboard"
+version = "1.0.20"
+description = "Prototipo de dashboard de contexto de mercado desde PostgreSQL heatmap_stock"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"

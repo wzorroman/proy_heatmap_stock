@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title|default("Radar Intermarket") }}</title>
+
+  {# Librerías locales (offline, sin CDN) — ver web/static/vendor/VERSIONS.md #}
+  <link rel="stylesheet" href="/static/app.css?v={{ version }}">
+  <script src="/static/vendor/echarts/6.1.0/echarts.min.js?v={{ version }}"></script>
+  <script src="/static/vendor/htmx/2.0.11/htmx.min.js?v={{ version }}" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <div class="brand">◈ {{ title|default("Radar Intermarket") }}</div>
+      <div class="sub">Contexto de mercado · PostgreSQL <code>heatmap_stock</code></div>
+    </div>
+    <div class="legend">
+      <span><i class="dot v"></i>positivo</span>
+      <span><i class="dot r"></i>negativo</span>
+      <span><i class="dot a"></i>neutral</span>
+      <span class="badge">v{{ version }}</span>
+    </div>
+  </header>
+
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="footer">
+    proy_dashboard · Fase 0 · datos: PostgreSQL <code>heatmap_stock</code>
+  </footer>
+
+  <script src="/static/app.js?v={{ version }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

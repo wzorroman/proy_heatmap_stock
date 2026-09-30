@@ -1,0 +1,25 @@
+<article class="card">
+  <h2>Sector Risk Gauge — Señal de Compra / Venta ({{ timeframe }})</h2>
+  <div class="gauge-legend">
+    <span class="pos">◄ COMPRAR</span>
+    <span class="neg">VENDER ►</span>
+  </div>
+  <div class="sector-list">
+    {% for s in sectores %}
+    <div class="sector-row">
+      <span class="sector-name" title="{{ s.sector }}">{{ s.sector }}</span>
+      <div class="sector-bar">
+        <div class="sector-gradient"></div>
+        <div class="sector-center"></div>
+        <div class="sector-marker {{ s.color }}" style="left: {{ s.signal }}%;"></div>
+      </div>
+      <span class="sector-label {{ s.color }}">● {{ s.label }}</span>
+      <span class="sector-meta">
+        {{ '%+.2f'|format(s.rend) if s.rend is not none else 'n/d' }}% /
+        {{ '%+.1f'|format(s.vol) if s.vol is not none else 'n/d' }}%
+      </span>
+    </div>
+    {% endfor %}
+    {% if not sectores %}<p class="muted">Sin datos sectoriales.</p>{% endif %}
+  </div>
+</article>

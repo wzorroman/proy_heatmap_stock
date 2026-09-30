@@ -1,0 +1,35 @@
+<article class="card">
+  <h2>Riesgo e Interpretación / Movimiento FX-Macro</h2>
+
+  <div class="sub">Interpretación de riesgo</div>
+  {% if driver %}
+  <p class="driver">
+    Driver: <b class="{{ driver.color }}">{{ driver.clave }} · {{ driver.nivel }}% [{{ driver.label }}]</b>
+  </p>
+  {% endif %}
+  <ul class="kv">
+    {% for g in riesgos %}
+    <li>
+      <span>{{ g.clave }}</span>
+      <b class="{{ g.color }}">
+        {{ '%.2f'|format(g.valor) if g.valor is not none else '—' }}
+        · {{ g.nivel }}% · {{ g.label }}
+      </b>
+    </li>
+    {% endfor %}
+  </ul>
+
+  <div class="sub" style="margin-top:12px;">Movimiento FX / Macro</div>
+  <ul class="kv">
+    {% for f in fx %}
+    <li>
+      <span>{{ f.clave }} <span class="muted">{{ f.nota }}</span></span>
+      <b class="{{ 'pos' if f.change_pct >= 0 else 'neg' }}">
+        {{ '%+.2f'|format(f.change_pct) }}%
+        <span class="muted">{{ '▲' if f.change_pct > 0 else ('▼' if f.change_pct < 0 else '▶') }}</span>
+      </b>
+    </li>
+    {% endfor %}
+    {% if not fx %}<li><span class="muted">Sin datos FX/Macro.</span></li>{% endif %}
+  </ul>
+</article>

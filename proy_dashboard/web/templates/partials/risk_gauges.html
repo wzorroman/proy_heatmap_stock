@@ -1,0 +1,16 @@
+<article class="card" style="--panel-accent: var(--rojo);">
+  <h2 class="tinted">Termómetro de Riesgo</h2>
+  <p class="nota">provisional: sin percentil 60d · nivel = (10 − norm_dir) · umbrales 40/60</p>
+  {% for g in gauges %}
+  <div class="gauge-row">
+    <div class="gauge-head">
+      <b>{{ g.clave }} ({{ '%.2f'|format(g.valor) if g.valor is not none else '—' }})</b>
+      <span class="gauge-estado {{ g.color }}">{{ g.nivel }}% [{{ g.label }}]</span>
+    </div>
+    <div class="bar-track">
+      <div class="bar-fill {{ g.color }}" style="width: {{ g.nivel }}%;"></div>
+    </div>
+  </div>
+  {% endfor %}
+  {% if not gauges %}<p class="muted">Sin datos de riesgo.</p>{% endif %}
+</article>

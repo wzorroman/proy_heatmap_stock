@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="grid">
+  {# Fila 1: score + riesgo (4 cards de 3 columnas cada una) #}
+  <div class="cell tres" hx-get="/partials/header" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML">
+    <article class="card"><p class="muted">Cargando score…</p></article>
+  </div>
+  <div class="cell tres" hx-get="/partials/riesgo_gauges" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
+  <div class="cell tres" hx-get="/partials/riesgo_fx" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
+  {# Riesgo intermarket (divergente) deshabilitado: duplica el Termómetro de Riesgo.
+  <div class="cell tres" hx-get="/partials/risk" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
+  #}
+  <div class="cell tres" hx-get="/partials/health" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
+
+  {# Fila: Precio QQQ / SPY / ORO con SMA20/50 + señal y recomendaciones #}
+  <div class="cell wide" hx-get="/partials/precios" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
+
+  {# Mapa sectorial (treemap) deshabilitado por ahora: no aporta valor.
+  <div class="cell wide" hx-get="/partials/treemap" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML">
+    <article class="card"><p class="muted">Cargando mapa sectorial…</p></article>
+  </div>
+  #}
+
+  <div class="cell wide" hx-get="/partials/score_history" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
+
+  <div class="cell fill" hx-get="/partials/sectors" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
+  <div class="cell fill" hx-get="/partials/sector_risk" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
+
+  <div class="cell" hx-get="/partials/alcistas" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
+  <div class="cell" hx-get="/partials/bajistas" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
+
+  <div class="cell" hx-get="/partials/momentum" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
+  <div class="cell" hx-get="/partials/change_rsi" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
+
+
+  {# RSI (top) eliminado (duplica info del scatter RSI top-cap).
+  <div class="cell" hx-get="/partials/indicators" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
+  #}
+
+  <div class="cell fill" hx-get="/partials/rsi_limites" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
+  <div class="cell fill" hx-get="/partials/multiframe" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
+
+  <div class="cell" hx-get="/partials/volume" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
+  <div class="cell" hx-get="/partials/range52w" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
+
+  <div class="cell calendar" hx-get="/partials/calendar" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
+
+  {# Paneles sin histórico suficiente (placeholders honestos) #}
+  {% for titulo, motivo in placeholders %}
+  <div class="cell">
+    {% with titulo=titulo, motivo=motivo %}{% include "partials/placeholder.html" %}{% endwith %}
+  </div>
+  {% endfor %}
+
+  {# Tabla de stocks por sector (parte inferior, filtrable) #}
+  <div class="cell wide" id="tabla-sector-card"
+       hx-get="/partials/tabla_sector"
+       hx-trigger="load, every {{ refresh_ms }}ms"
+       hx-include="#sector-select, .ts-search"
+       hx-swap="innerHTML"></div>
+</section>
+{% endblock %}

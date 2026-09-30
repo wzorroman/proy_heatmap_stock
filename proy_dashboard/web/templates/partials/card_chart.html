@@ -1,0 +1,31 @@
+<article class="card{% if fill %} card-fill{% endif %}"{% if accent %} style="--panel-accent: {{ accent }};"{% endif %}>
+  <h2{% if accent %} class="tinted"{% endif %}>{{ titulo }}</h2>
+  {% if nota %}<p class="nota">{{ nota|safe }}</p>{% endif %}
+  <div id="{{ chart_id }}" class="chart"{% if not fill %} style="height: {{ altura|default(280) }}px;"{% endif %}></div>
+  <script>
+    (function () {
+      var opt = {{ option|tojson }};
+      // Muestra solo el ticker (sin "NASDAQ:", "NYSE:", …) en ejes y puntos;
+      // los tooltips conservan el símbolo completo.
+      function ticker(v) { return v == null ? v : String(v).replace(/^[^:]+:/, ""); }
+
+      var ax = opt.yAxis;
+      if (ax && !Array.isArray(ax) && ax.type === "category") {
+        ax.axisLabel = ax.axisLabel || {};
+        if (ax.axisLabel.rich && ax.axisLabel.rich.sym) {
+          ax.axisLabel.formatter = function (v) { return "{sym|" + ticker(v) + "}"; };
+        } else {
+          ax.axisLabel.formatter = function (v) { return ticker(v); };
+        }
+      }
+
+      (opt.series || []).forEach(function (s) {
+        if (s.type === "scatter" && s.label && s.label.show) {
+          s.label.formatter = function (p) { return ticker(p.name); };
+        }
+      });
+
+      window.renderChart("{{ chart_id }}", opt);
+    })();
+  </script>
+</article>

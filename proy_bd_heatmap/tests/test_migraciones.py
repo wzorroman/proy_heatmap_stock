@@ -93,9 +93,11 @@ def test_historial_lineal(bd_scratch):
     assert "0006 -> 0005" in r.stdout or "0005 -> 0006" in r.stdout
     assert "0007 -> 0006" in r.stdout or "0006 -> 0007" in r.stdout
     assert "0008 -> 0007" in r.stdout or "0007 -> 0008" in r.stdout
-    # head == 0008 (0001 baseline → 0002 seed → 0003 F4.2 → 0004 F4.3 → 0005 F4.4 → 0006 F4.5/F4.5b → 0007 seed dim_country → 0008 alta dim_asset)
+    assert "0009 -> 0008" in r.stdout or "0008 -> 0009" in r.stdout
+    # head == 0009 (0001 baseline → 0002 seed → 0003 F4.2 → 0004 F4.3 → 0005 F4.4 →
+    #              0006 F4.5/F4.5b → 0007 seed dim_country → 0008 alta dim_asset → 0009 score dashboard)
     r = _run([ALEMBIC, "current"])
-    assert "0008 (head)" in r.stdout
+    assert "0009 (head)" in r.stdout
 
 
 def test_esquema_baseline(bd_scratch):
@@ -427,6 +429,122 @@ def test_seq_dim_asset_sincronizada(bd_scratch):
         "FROM dim_asset_asset_id_seq;\n"
     )
     assert out.strip() == "4711|4711"
+
+
+def test_fact_market_score_schema(bd_scratch):
+    """0009: fact_market_score particionada por RANGE(timestamp_utc) con BRIN."""
+    out = _psql("SELECT pg_get_partkeydef('public.fact_market_score'::regclass);\n")
+    assert out.strip() == "RANGE (timestamp_utc)"
+    parts = _psql(
+        "SELECT count(*) FROM pg_inherits i "
+        "JOIN pg_class c ON i.inhrelid = c.oid "
+        "JOIN pg_class p ON i.inhparent = p.oid "
+        "WHERE p.relname = 'fact_market_score';\n"
+    )
+    assert int(parts.strip()) >= 10
+    cols = _psql(
+        "SELECT string_agg(column_name, ',') FROM information_schema.columns "
+        "WHERE table_schema='public' AND table_name='fact_market_score';\n"
+    )
+    for c in ("asset_id", "timestamp_utc", "score_general", "zona",
+              "componentes", "ingested_at"):
+        assert c in cols, f"falta columna {c}"
+    pk = _psql(
+        "SELECT string_agg(a.attname, ',') FROM pg_index i "
+        "JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey) "
+        "WHERE i.indrelid = 'public.fact_market_score'::regclass AND i.indisprimary;\n"
+    )
+    assert pk.strip() == "asset_id,timestamp_utc"
+    brin = _psql(
+        "SELECT count(*) FROM pg_indexes WHERE tablename='fact_market_score_2026_09' "
+        "AND indexdef ILIKE '%USING brin (timestamp_utc)%';\n"
+    )
+    assert int(brin.strip()) == 1
+
+
+def test_fact_market_score_agg_schema(bd_scratch):
+    """0009: fact_market_score_agg no particionada, PK timestamp_utc y BRIN."""
+    rango = _psql("SELECT pg_get_partkeydef('public.fact_market_score_agg'::regclass);\n")
+    assert rango.strip() == ""
+    cols = _psql(
+        "SELECT string_agg(column_name, ',') FROM information_schema.columns "
+        "WHERE table_schema='public' AND table_name='fact_market_score_agg';\n"
+    )
+    for c in ("timestamp_utc", "score_momentum", "score_15min", "score_radar",
+              "score_market", "zona", "n_simbolos", "source_checksum",
+              "audit_id", "ingested_at"):
+        assert c in cols, f"falta columna {c}"
+    pk = _psql(
+        "SELECT string_agg(a.attname, ',') FROM pg_index i "
+        "JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey) "
+        "WHERE i.indrelid = 'public.fact_market_score_agg'::regclass AND i.indisprimary;\n"
+    )
+    assert pk.strip() == "timestamp_utc"
+    brin = _psql(
+        "SELECT count(*) FROM pg_indexes WHERE tablename='fact_market_score_agg' "
+        "AND indexdef ILIKE '%USING brin (timestamp_utc)%';\n"
+    )
+    assert int(brin.strip()) == 1
+
+
+def test_vistas_score(bd_scratch):
+    """0009: las vistas de presentación del score existen."""
+    views = _psql(
+        "SELECT coalesce(string_agg(table_name, ','), '') FROM information_schema.views "
+        "WHERE table_schema='public';\n"
+    )
+    assert "vw_market_score_history" in views
+    assert "vw_market_score_latest" in views
+
+
+def test_score_upsert_y_reversion(bd_scratch):
+    """UPSERT idempotente en detalle/agg, lectura por vista y reversión de 0009."""
+    _psql(
+        "INSERT INTO fact_market_score "
+        "    (asset_id, timestamp_utc, score_general, zona, componentes) "
+        "VALUES (1011, TIMESTAMPTZ '2026-09-30 14:00:00+00', 7.25, 'COMPRAR', "
+        "        jsonb_build_object('rsi', 70)) "
+        "ON CONFLICT (asset_id, timestamp_utc) DO UPDATE "
+        "    SET score_general = EXCLUDED.score_general;\n"
+    )
+    _psql(
+        "INSERT INTO fact_market_score "
+        "    (asset_id, timestamp_utc, score_general, zona, componentes) "
+        "VALUES (1011, TIMESTAMPTZ '2026-09-30 14:00:00+00', 7.50, 'COMPRAR', "
+        "        jsonb_build_object('rsi', 72)) "
+        "ON CONFLICT (asset_id, timestamp_utc) DO UPDATE "
+        "    SET score_general = EXCLUDED.score_general;\n"
+    )
+    n = _psql("SELECT count(*) FROM fact_market_score WHERE asset_id=1011;\n")
+    assert n.strip() == "1"
+    val = _psql("SELECT score_general FROM fact_market_score WHERE asset_id=1011;\n")
+    assert val.strip() == "7.5000"
+
+    _psql(
+        "INSERT INTO fact_market_score_agg "
+        "    (timestamp_utc, score_momentum, score_radar, n_simbolos) "
+        "VALUES (TIMESTAMPTZ '2026-09-30 14:00:00+00', 6.10, 5.20, 123) "
+        "ON CONFLICT (timestamp_utc) DO UPDATE "
+        "    SET score_momentum = EXCLUDED.score_momentum;\n"
+    )
+    latest = _psql("SELECT score_momentum FROM vw_market_score_latest;\n")
+    assert latest.strip() == "6.1000"
+
+    # downgrade 0009 revierte tablas y vistas
+    _run([ALEMBIC, "downgrade", "0008"])
+    tablas = _psql(
+        "SELECT coalesce(string_agg(table_name, ','), '') FROM information_schema.tables "
+        "WHERE table_schema='public';\n"
+    )
+    assert "fact_market_score" not in tablas
+    assert "fact_market_score_agg" not in tablas
+    vistas = _psql(
+        "SELECT coalesce(string_agg(table_name, ','), '') FROM information_schema.views "
+        "WHERE table_schema='public';\n"
+    )
+    assert "vw_market_score_latest" not in vistas
+    # re-upgrade deja la BD lista para el resto de la suite
+    _run([ALEMBIC, "upgrade", "head"])
 
 
 def test_downgrade_base(bd_scratch):

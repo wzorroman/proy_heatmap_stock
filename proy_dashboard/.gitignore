@@ -1,0 +1,17 @@
+# Entorno
+venv/
+.venv/
+.env
+wheelhouse/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs
+logs/
+*.log

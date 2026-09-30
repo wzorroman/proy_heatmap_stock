@@ -1,0 +1,51 @@
+<article class="card" style="--panel-accent: {{ 'var(--verde)' if color == 'verde' else 'var(--rojo)' }};">
+  <h2 class="tinted">{{ titulo }} ({{ items|length }})</h2>
+  <div class="lista">
+    {% for it in items %}
+    {# DISEÑO NUEVO: símbolo a la izquierda · barra + valor a la derecha #}
+    <div class="item-fila">
+      {% if it.logo %}
+      <img class="item-logo" src="{{ it.logo }}" alt="" loading="lazy">
+      {% else %}
+      <span class="item-logo item-logo-empty" aria-hidden="true"></span>
+      {% endif %}
+      <span class="item-sym">{{ it.ticker }}</span>
+      <span class="item-price" title="Cierre día anterior">
+        {{ '%.2f'|format(it.prev_close) if it.prev_close is not none else '—' }}
+      </span>
+      <div class="item-track">
+        <div class="bar-fill {{ color }}" style="width: {{ it.pct }}%;"></div>
+      </div>
+      <span class="item-val">
+        <span class="pct {{ 'pos' if it.change_pct >= 0 else 'neg' }}">
+          {{ '%+.2f'|format(it.change_pct) }}%
+        </span>
+        <span class="item-now">
+          ({{ '%.2f'|format(it.close) if it.close is not none else '—' }})
+        </span>
+      </span>
+    </div>
+    {% endfor %}
+    {% if not items %}<p class="muted">Sin datos.</p>{% endif %}
+  </div>
+</article>
+
+{#
+  ============================================================================
+  DISEÑO ANTERIOR (para revertir: reemplaza el bloque <div class="item-fila">…
+  {% endfor %} de arriba por el siguiente, y borra las clases .item-fila/.item-sym/
+  .item-track/.item-val de app.css si quieres dejarlo limpio):
+
+  {% for it in items %}
+  <div class="item">
+    <div class="item-head">
+      <span>{{ it.ticker }}</span>
+      <b class="{{ 'pos' if it.change_pct >= 0 else 'neg' }}">{{ '%+.2f'|format(it.change_pct) }}%</b>
+    </div>
+    <div class="bar-track">
+      <div class="bar-fill {{ color }}" style="width: {{ it.pct }}%;"></div>
+    </div>
+  </div>
+  {% endfor %}
+  ============================================================================
+#}

@@ -1,0 +1,23 @@
+<article class="card">
+  <h2>{{ titulo }}</h2>
+  <div class="tabla-wrap">
+    <table class="tabla">
+      <thead>
+        <tr>{% for h in headers %}<th>{{ h }}</th>{% endfor %}</tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          {% for c in row %}
+            {% if c is mapping %}
+              <td class="{{ c.clase|default('') }}">{{ c.texto }}</td>
+            {% else %}
+              <td>{{ c }}</td>
+            {% endif %}
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</article>

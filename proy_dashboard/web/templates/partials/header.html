@@ -1,0 +1,25 @@
+<article class="card">
+  <h2>Score de mercado</h2>
+  <div class="grid-2">
+    <div>
+      <div id="chart-header" class="chart" style="height: 180px;"></div>
+      <div style="text-align:center; margin-top:-6px;">
+        <span class="zona zona-{{ mercado.zona }}">{{ mercado.zona }}</span>
+      </div>
+    </div>
+    <ul class="kv">
+      {% for label, val in [('Momentum', mercado.score_momentum), ('Radar', mercado.score_radar), ('15 min', mercado.score_15min)] %}
+      <li>
+        <span>{{ label }}</span>
+        <b class="{{ 'pos' if (val is not none and val >= 6.5) else ('neg' if (val is not none and val <= 4.5) else 'neu') }}">
+          {{ '%.2f'|format(val) if val is not none else '—' }}
+        </b>
+      </li>
+      {% endfor %}
+      <li><span>Activos</span><b>{{ n_activos }}</b></li>
+      <li><span>Fase</span><b>{{ fase.fase }}</b></li>
+      <li><span>Ciclo UTC</span><b>{{ mercado.timestamp_utc.strftime('%d/%m %H:%M') }}</b></li>
+    </ul>
+  </div>
+  <script>window.renderChart("chart-header", {{ option|tojson }});</script>
+</article>

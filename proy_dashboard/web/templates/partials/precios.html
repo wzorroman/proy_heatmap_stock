@@ -1,0 +1,58 @@
+<div class="precios-grid">
+  {% for c in tarjetas %}
+  <article class="card" style="--panel-accent: {{ c.accent }};">
+    <h2 class="tinted">{{ c.titulo }} — SMA20/SMA50</h2>
+
+    {% if c.sin_datos %}
+    <p class="muted">Sin datos de precio para <code>{{ c.symbol }}</code>.</p>
+
+    {% else %}
+    <div class="precio-meta">
+      <span class="zona zona-{{ c.signal }}">{{ c.signal }}</span>
+      <span class="muted small">Convicción {{ '%.0f'|format(c.signal_score) }}/100</span>
+      <span class="muted small" style="margin-left:auto;">{{ c.symbol }}</span>
+    </div>
+
+    <div id="chart-precio-{{ c.clave }}" class="chart" style="height: 230px;"></div>
+
+    <div class="metricas">
+      {% for m in c.metricas %}
+      <div class="metrica">
+        <span class="metrica-label">{{ m.etiqueta }}</span>
+        <div class="bar-track metrica-track{% if m.centrada %} centrada{% endif %}{% if m.clave == 'rsi' %} rsi{% endif %}"
+             {% if m.clave == 'rsi' and m.zonas %}style="--rsi-bajo: {{ m.zonas[0] }}%; --rsi-alto: {{ m.zonas[1] }}%;"{% endif %}>
+          {% if m.pct is not none %}
+            {% if m.centrada %}
+              {% if m.signo >= 0 %}
+          <div class="bar-fill {{ m.color }}" style="left: 50%; width: {{ m.pct }}%;"></div>
+              {% else %}
+          <div class="bar-fill {{ m.color }}" style="right: 50%; width: {{ m.pct }}%;"></div>
+              {% endif %}
+            {% else %}
+          <div class="bar-fill {{ m.color }}" style="width: {{ m.pct }}%;"></div>
+            {% endif %}
+          {% endif %}
+          {% if m.marca is not none %}<div class="metrica-marca" style="left: {{ m.marca }}%;"></div>{% endif %}
+          {% if m.clave == 'rsi' and m.zonas %}
+          <div class="metrica-zona" style="left: {{ m.zonas[0] }}%;"></div>
+          <div class="metrica-zona" style="left: {{ m.zonas[1] }}%;"></div>
+          {% endif %}
+        </div>
+        <span class="metrica-valor">{{ m.texto }}</span>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="muted small" style="margin-top:6px;">
+      Rango 48h: {{ '%.2f'|format(c.rango.lo) }} – {{ '%.2f'|format(c.rango.hi) }}
+    </div>
+
+    <ul class="recs">
+      {% for r in c.recomendaciones %}<li>{{ r }}</li>{% endfor %}
+    </ul>
+
+    <script>window.renderChart("chart-precio-{{ c.clave }}", {{ c.option|tojson }});</script>
+    {% endif %}
+  </article>
+  {% endfor %}
+</div>
