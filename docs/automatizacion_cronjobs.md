@@ -309,8 +309,8 @@ CRON_TZ=America/New_York
 1-59/3 0-16 * * 5    /opt/proy_heatmap_stock/proy_scrapping_detail/run_scraper_tradingview.sh
 
 # --- B    MUESTREO T ^h^r10 s PARA CIERRE DEFINITIVE (PENDIENTE: dejar comentado) ---
-## 14,29,44,59 * * * 1-4 /opt/.../run_scraper_tradingview.sh --at-close
-## 14,29,44,59 * * * 5    /opt/.../run_scraper_tradingview.sh --at-close
+## 14,29,44,59 * * * 1-4 /opt/proy_heatmap_stock/proy_scrapping_detail/run_scraper_tradingview.sh --at-close
+## 14,29,44,59 * * * 5    /opt/proy_heatmap_stock/proy_scrapping_detail/run_scraper_tradingview.sh --at-close
 
 # --- C    HEATMAP V1 (cada 15 min, gate NYSE, +20 s internos) ---
 */15 0-23 * * 1-4 /opt/proy_heatmap_stock/proy_heatmap/run_heatmap.sh
@@ -321,13 +321,13 @@ CRON_TZ=America/New_York
 */15 0-16 * * 5    /opt/proy_heatmap_stock/proy_scrapping_detail/run_calendario_tradingview.sh
 
 # --- E    BARRAS 15 MIN (+1 min tras el cierre de cada barra) ---
-1,16,31,46 * * * 1-4 cd /opt/proy_heatmap_stock/proy_scrapping_detail && set -a && . ./.env && set +a && ./venv/bin/python3 scripts/build_market_bar_15m.py
-1,16,31,46 * * * 5    cd /opt/proy_heatmap_stock/proy_scrapping_detail && set -a && . ./.env && set +a && ./venv/bin/python3 scripts/build_market_bar_15m.py
+2,17,32,47 * * * 1-4 cd /opt/proy_heatmap_stock/proy_scrapping_detail && set -a && . ./.env && set +a && ./venv/bin/python3 scripts/build_market_bar_15m.py
+2,17,32,47 * * * 5    cd /opt/proy_heatmap_stock/proy_scrapping_detail && set -a && . ./.env && set +a && ./venv/bin/python3 scripts/build_market_bar_15m.py
 
 # --- F    SUITE DE CALIDAD NOCTURNA (F4.8, diaria 04:05 ET) ---
 5 4 * * * /opt/proy_heatmap_stock/proy_bd_heatmap/venv/bin/python3 /opt/proy_heatmap_stock/proy_bd_heatmap/scripts/suite_calidad_nocturna.py
 
-# --- G    MONITOR DE ALERTAS (cada 5 min en ventana) ---
-*/5 0-23 * * 1-4 cd /opt/proy_heatmap_stock/proy_scrapping_detail && set -a && . ./.env && set +a && ./venv/bin/python3 monitor_alertas.py
-*/5 0-16 * * 5    cd /opt/proy_heatmap_stock/proy_scrapping_detail && set -a && . ./.env && set +a && ./venv/bin/python3 monitor_alertas.py
+# --- G    MONITOR DE ALERTAS (cada 9 min en ventana) ---
+2-59/9 0-23 * * 1-4 cd /opt/proy_heatmap_stock/proy_scrapping_detail && set -a && . ./.env && set +a && ./venv/bin/python3 monitor_alertas.py
+2-59/9 0-16 * * 5    cd /opt/proy_heatmap_stock/proy_scrapping_detail && set -a && . ./.env && set +a && ./venv/bin/python3 monitor_alertas.py
  ```
