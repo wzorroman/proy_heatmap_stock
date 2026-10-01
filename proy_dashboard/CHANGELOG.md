@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Velas 15 min: el símbolo por defecto ya no es fijo (`NASDAQ:NVDA`); ahora toma el primer símbolo del screener 15 min. Sigue permitiendo `?symbol=...`.
 - Velas 15 min: se mantiene un único gráfico (se descarta la vista de 3 comparativas).
 - Screener 15 min: las filas son clicables y recargan el panel de velas con el símbolo seleccionado.
+- Screener 15 min: valores de columna **centrados** (antes a la derecha) y más separación horizontal (`padding 9px`), para que `Vol ratio` no quede pegado a `Señal`. Aplica igual a la última columna (`Señal`/`Ruptura`) en `ib_acciones`.
 - Fila Trading 15 min movida debajo de Alcistas/Bajistas del día, reorganizada en **dos filas**: `Screener (5) + Rango inicial por acción (4) + Confluencia (3)` y `Velas 15m (7) + Mapa de calor 15m (5)`.
 - Confluencia 5m/15m/1D: ahora usa exactamente los mismos símbolos y el mismo orden visual que el screener 15 min (eje Y invertido y datos del heatmap transpuestos correctamente).
 - Fila del screener: los 3 cards mantienen la misma altura (clase `card-trading` + `.chart-fill`); velas y mapa sectorial también comparten fila con altura uniforme.

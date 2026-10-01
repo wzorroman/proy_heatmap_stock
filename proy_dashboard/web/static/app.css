@@ -268,18 +268,21 @@ body {
 .screener-table { max-height: none; overflow: visible; }
 .screener-table .tabla { font-size: 0.7rem; border-collapse: separate; border-spacing: 0 3px; }
 .screener-table .tabla th,
-.screener-table .tabla td { padding: 6px 4px; border-bottom: none; vertical-align: middle; }
+.screener-table .tabla td { padding: 6px 9px; border-bottom: none; vertical-align: middle; }
 .screener-table .tabla thead th {
   font-size: 0.56rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--muted);
-  padding: 0 4px 5px;
+  padding: 0 9px 5px;
   background: transparent;
   border-bottom: 1px solid var(--border);
 }
+/* Valores centrados: columnas uniformes y sin choque con la última (Señal/Ruptura) */
 .screener-table .tabla th.num,
-.screener-table .tabla td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.screener-table .tabla td.num { text-align: center; font-variant-numeric: tabular-nums; }
+.screener-table .tabla th:last-child,
+.screener-table .tabla td:last-child { text-align: center; }
 .screener-table .tsym { font-weight: 800; color: var(--text); }
 .screener-table .sym { gap: 5px; align-items: center; white-space: nowrap; }
 .screener-table .tabla tbody tr.screener-row {
