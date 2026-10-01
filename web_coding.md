@@ -7,3 +7,6 @@
 # -- Clear python - Uvicorn port 8006
  $ kill $(ps aux | grep 'uvicorn.*8006' | grep -v grep | awk '{print $2}') 2>/dev/null; echo "Cleaned up port 8006"
  
+# graficos del dashboard
+    https://echarts.apache.org/examples/en/index.html
+    
