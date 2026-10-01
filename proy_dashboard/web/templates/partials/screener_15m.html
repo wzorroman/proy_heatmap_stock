@@ -23,7 +23,7 @@
         <tr class="screener-row" data-symbol="{{ r.symbol }}"
             hx-get="/partials/velas_15m?symbol={{ r.symbol|urlencode }}"
             hx-target="#trading-velas-card"
-            hx-swap="innerHTML">
+            hx-swap="innerHTML swap:0.3s settle:0.5s">
           <td class="tsym">
             <span class="sym">
               {% if r.logo %}

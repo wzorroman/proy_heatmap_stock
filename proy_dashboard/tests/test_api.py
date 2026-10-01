@@ -12,7 +12,7 @@ def test_version_endpoint():
     assert response.status_code == 200
     data = response.json()
     assert data["app"] == "proy_dashboard"
-    assert data["version"] == "1.0.20"
+    assert data["version"] == "1.0.21"
     assert "env" in data
 
 

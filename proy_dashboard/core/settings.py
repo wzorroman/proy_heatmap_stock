@@ -25,7 +25,7 @@ DEFAULT_ENV_FILE = PROJECT_PATH / ".env"
 DEFAULT_CONFIG_FILE = PROJECT_PATH / "config_dashboard.json"
 
 # Versión de la aplicación (D17). Subir al cerrar cada fase.
-VERSION = "1.0.20"
+VERSION = "1.0.21"
 
 
 def _get(key: str, default: Optional[str] = None) -> Optional[str]:

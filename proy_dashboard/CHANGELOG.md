@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Evolución del score de mercado: la línea pasa a **smoothed con puntos visibles** (`symbol: circle`, `symbolSize: 5`), en **azul cian vivo** `#00d4ff` con **borde oscuro** `#0b1220` para resaltar sobre el relleno del área; hover con escala ×1.5 y `#5ee7ff`.
+- Evolución del score de mercado: se agregan **separadores verticales naranjas punteados** en la medianoche de la zona de visualización (`APP_TIMEZONE`) y **sombreado gris claro de la sesión NY 09:30–16:00 ET** con DST correcto (markArea con `z: 3` sobre la serie, para que no lo tape el área azul de la línea). Los datos siguen en UTC en la BD; la conversión es **puramente visual**.
+- Evolución del score de mercado: **línea vertical gris sólida con etiqueta `APERTURA`** en la primera muestra de cada sesión NY 09:30 ET.
+- Versión **1.0.20 → 1.0.21** (`core/settings.py`, `pyproject.toml`): el cache-buster de estáticos (`app.css?v=`) no cambiaba y servía CSS viejo al navegador; subir la versión invalida la caché.
+- Velas 15 min: al seleccionar un símbolo en el screener, el card de velas hace un **fade suave** (~0.3 s salida + 0.5 s entrada) en lugar del swap instantáneo (`hx-swap="innerHTML swap:0.3s settle:0.5s"` + clases `htmx-swapping`/`htmx-settling` de HTMX sobre `#trading-velas-card`).
 - Screener 15 min: se elimina el scroll interno; ahora muestra hasta 20 señales COMPRAR/VENDER y, si hay menos de 5, completa con los top movimientos hasta 15 filas.
 - Velas 15 min: el símbolo por defecto ya no es fijo (`NASDAQ:NVDA`); ahora toma el primer símbolo del screener 15 min. Sigue permitiendo `?symbol=...`.
 - Velas 15 min: se mantiene un único gráfico (se descarta la vista de 3 comparativas).
@@ -37,6 +42,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Favicon del dashboard**: `web/static/favicon.svg` (+ `favicon.png`/`favicon.ico` de respaldo) con el motivo de marca — diamante ◈ azul/cian sobre fondo `#0d1117`; enlazado en `base.html` con cache-buster `?v=`.
+- `charts.line_option()` acepta `mark_lines` (separadores de día), `market_hours` (ventanas de sesión), `market_open_lines` + `market_open_label` (apertura NY) y el helper `charts._vertical_markline()` — markLine vertical por par de coordenadas `[idx, y0]→[idx, y1]`, formato que sí respeta el eje de categorías.
+- Nota del panel *Evolución del score de mercado*: **leyenda con muestras de color** — `n ciclos · ▮ medianoche · ▮ apertura NY HH:MM <TZ>`; la hora de apertura se convierte dinámicamente a `APP_TIMEZONE` (p. ej. `08:30 PE` con NY en EDT).
 - **Mapa de calor 15m por sector (5.5)**: nuevo `services/sector_15m_service.py` (cambio medio 15m por sector), `charts.sector_15m_option()` (treemap pastel, área = nº de acciones), endpoint `/partials/sector_15m` y test de agregación.
 - **Histograma del score 15m (5.6)**: `ScoreService.distribucion_15min()`/`histograma_de_scores()` (distribución por acción, media, percentil, zonas y descripción), `charts.score_hist_option()` (barras por zona + marca de media) y endpoint `/partials/score_15m`. El título indica la temporalidad (`Distribución score 15m`) y la nota describe/recomienda. Tests en `tests/test_score_service.py`.
 - **Initial Balance (rango inicial 09:30–10:00 NY)**:

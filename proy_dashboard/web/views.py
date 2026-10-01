@@ -334,19 +334,61 @@ def score_history(request: Request):
     c = _container(request)
     desde = now_utc() - timedelta(hours=int(c.settings.business("panels", "history_hours_default", default=24)))
     rows = c.score_repo.fetch_agg_history(desde)
-    puntos = [
-        (
-            r["timestamp_utc"].strftime("%d/%m %H:%M"),
-            round(float(r["score_market"]), 2) if r.get("score_market") is not None else None,
-        )
-        for r in rows
-    ]
-    puntos = [(x, y) for x, y in puntos if y is not None]
+    tz_view = get_tz(c.settings.timezone)
+    tz_ny = get_tz("America/New_York")
+    puntos = []
+    mark_lines = []
+    market_hours = []
+    market_open_lines = []
+    last_date = None
+    in_market = False
+    market_start_idx = None
+    for r in rows:
+        ts = r["timestamp_utc"]
+        if r.get("score_market") is None:
+            continue
+        label = ts.astimezone(tz_view).strftime("%d/%m %H:%M")
+        puntos.append((label, round(float(r["score_market"]), 2)))
+        idx = len(puntos) - 1
+        # Separador de día (medianoche en zona de visualización)
+        local_date = ts.astimezone(tz_view).date()
+        if last_date is not None and local_date != last_date:
+            mark_lines.append(idx)
+        last_date = local_date
+        # Horario de mercado NY 9:30-16:00 ET (con DST correcto)
+        ny = ts.astimezone(tz_ny)
+        minutos = ny.hour * 60 + ny.minute
+        is_market = 9 * 60 + 30 <= minutos < 16 * 60
+        if is_market and not in_market:
+            in_market = True
+            market_start_idx = idx
+            market_open_lines.append(idx)
+        elif not is_market and in_market:
+            in_market = False
+            market_hours.append([{"xAxis": market_start_idx}, {"xAxis": idx - 1}])
+            market_start_idx = None
+    if in_market and market_start_idx is not None:
+        market_hours.append([{"xAxis": market_start_idx}, {"xAxis": len(puntos) - 1}])
     zonas = c.settings.business("score", "zones", default={"comprar": 6.5, "vender": 4.5})
+    # Apertura NY expresada en la zona de visualización (APP_TIMEZONE)
+    from datetime import datetime as _dt
+
+    apertura_local = (
+        _dt.now(tz_ny).replace(hour=9, minute=30, second=0, microsecond=0)
+        .astimezone(tz_view)
+        .strftime("%H:%M")
+    )
     return _card(
         request, "Evolución del score de mercado", "chart-score-history",
-        charts.line_option(puntos, y_min=0, y_max=10, zonas=zonas),
-        nota=f"{len(puntos)} ciclos",
+        charts.line_option(
+            puntos, y_min=0, y_max=10, zonas=zonas,
+            mark_lines=mark_lines, market_hours=market_hours,
+            market_open_lines=market_open_lines,
+        ),
+        nota=(
+            f"{len(puntos)} ciclos · <span style='color:#ff9f40'>▮</span> medianoche · "
+            f"<span style='color:#b8c2cc'>▮</span> apertura NY {apertura_local} {tz_label(c.settings.timezone)}"
+        ),
         altura=260,
     )
 

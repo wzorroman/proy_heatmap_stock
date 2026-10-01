@@ -6,7 +6,7 @@ from core.settings import VERSION, load_settings
 def test_defaults_sin_entorno(clean_env, empty_env_file, config_file):
     settings = load_settings(env_file=empty_env_file, config_path=config_file)
 
-    assert settings.version == VERSION == "1.0.20"
+    assert settings.version == VERSION == "1.0.21"
     assert settings.app_name == "proy_dashboard"
     assert settings.app_env == "dev"
     assert settings.port == 8100

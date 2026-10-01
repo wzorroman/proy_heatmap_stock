@@ -338,7 +338,31 @@ def score_hist_option(dist, *, comprar=6.5, vender=4.5) -> dict:
     return op
 
 
-def line_option(puntos, *, nombre="", color=AZUL, y_min=None, y_max=None, zonas=None) -> dict:
+def _vertical_markline(idx, y0, y1, *, color, width=1.5, type_="dashed", label=None):
+    lab = {"show": False} if not label else {
+        "show": True, "formatter": label, "position": "insideStartTop",
+        "color": color, "fontSize": 8,
+    }
+    ls = {"color": color, "type": type_, "width": width}
+    return [
+        {"coord": [idx, y0], "lineStyle": ls, "label": dict(lab), "symbol": "none"},
+        {"coord": [idx, y1], "lineStyle": ls, "label": lab, "symbol": "none"},
+    ]
+
+
+def line_option(
+    puntos,
+    *,
+    nombre="",
+    color=AZUL,
+    y_min=None,
+    y_max=None,
+    zonas=None,
+    mark_lines=None,
+    market_hours=None,
+    market_open_lines=None,
+    market_open_label="APERTURA",
+) -> dict:
     x = [p[0] for p in puntos]
     y = [p[1] for p in puntos]
     op = _base()
@@ -350,7 +374,11 @@ def line_option(puntos, *, nombre="", color=AZUL, y_min=None, y_max=None, zonas=
         "name": nombre,
         "data": y,
         "smooth": True,
-        "showSymbol": False,
+        "showSymbol": True,
+        "symbol": "circle",
+        "symbolSize": 5,
+        "itemStyle": {"color": "#00d4ff", "borderColor": "#0b1220", "borderWidth": 1},
+        "emphasis": {"scale": 1.5, "itemStyle": {"color": "#5ee7ff", "borderWidth": 2}},
         "lineStyle": {"color": color, "width": 2},
         "areaStyle": {
             "color": {
@@ -363,6 +391,7 @@ def line_option(puntos, *, nombre="", color=AZUL, y_min=None, y_max=None, zonas=
             }
         },
     }
+    # Líneas horizontales (zonas COMPRAR/VENDER)
     if zonas:
         serie["markLine"] = {
             "silent": True,
@@ -375,6 +404,33 @@ def line_option(puntos, *, nombre="", color=AZUL, y_min=None, y_max=None, zonas=
                  "label": {"formatter": "VENDER"}},
             ],
         }
+    # Líneas verticales: separadores de día (naranja) y apertura NY (gris)
+    y0 = y_min if y_min is not None else 0
+    y1 = y_max if y_max is not None else 10
+    vlines = []
+    if mark_lines:
+        vlines += [_vertical_markline(i, y0, y1, color="#ff9f40") for i in mark_lines]
+    if market_open_lines:
+        vlines += [
+            _vertical_markline(i, y0, y1, color="#b8c2cc", type_="solid", label=market_open_label)
+            for i in market_open_lines
+        ]
+    if vlines:
+        if "markLine" not in serie:
+            serie["markLine"] = {"silent": True, "symbol": "none", "data": []}
+        serie["markLine"]["data"].extend(vlines)
+    # Sombreado horario NY: markArea Gris CLARO sobre la serie (z alto), contraste con el azul
+    if market_hours:
+        areas = serie.get("markArea", {"silent": True, "z": 3, "data": [], "label": {"show": False}})
+        serie["markArea"] = areas
+        for area in market_hours:
+            area[0]["itemStyle"] = {
+                "color": "rgba(200,208,216,0.12)",
+                "borderColor": "rgba(200,208,216,0.50)",
+                "borderWidth": 1,
+                "borderType": "dotted",
+            }
+        areas["data"].extend(market_hours)
     op["series"] = [serie]
     return op
 
