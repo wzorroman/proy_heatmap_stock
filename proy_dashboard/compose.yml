@@ -1,0 +1,39 @@
+# compose.yml — proy_dashboard con Podman (funciona con `podman-compose` o `podman compose`)
+#
+# ⚠️ Solo el dashboard web corre en contenedor. Los jobs de datos
+# (persist_score cada 3 min, watchdog cada 10 min, scrapers, heatmap)
+# SIGUEN EN EL CRONTAB DEL SERVIDOR como appuser — ver README sección
+# "Deploy en producción · Cron". No duplicarlas aquí.
+#
+# Uso:
+#   podman-compose up -d --build          # build + arranque
+#   podman-compose logs -f dashboard      # seguir logs
+#   podman-compose down                   # detener
+#
+# Requiere ./.env (no versionar) con BD_HEATMAP_* y APP_* — ver .env.example.
+# Rootless OK (puerto 8100 > 1024, sin privilegios).
+
+services:
+  dashboard:
+    build:
+      context: .
+      dockerfile: Containerfile
+    image: localhost/proy_dashboard:latest
+    container_name: proy_dashboard
+    env_file:
+      - .env
+    ports:
+      - "8100:8100"
+    volumes:
+      - ./logs:/app/logs
+    # El contenedor solo LEE (la web); la escritura la hacen los crones del
+    # servidor con su propio .env. En true no pasa nada, pero es explícito.
+    environment:
+      DB_WRITE_ENABLED: "false"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8100/api/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3

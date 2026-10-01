@@ -1,0 +1,37 @@
+# Containerfile — proy_dashboard para Podman/Docker (rootless OK)
+# Build:  podman build -t localhost/proy_dashboard:latest -f Containerfile .
+# Run:    podman run -d --name proy_dashboard -p 8100:8100 --env-file .env proy_dashboard
+
+FROM docker.io/library/python:3.13-slim
+
+# psycopg2-binary trae su libpq embebida; curl solo para HEALTHCHECK.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends curl tzdata \
+ && rm -rf /var/lib/apt/lists/*
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    TZ=America/New_York
+
+# Usuario no-root (uid 10001: compatible con rootless Podman y mapeo de subuids)
+RUN groupadd -g 10001 appuser && useradd -u 10001 -g appuser -d /app -s /bin/bash appuser
+
+WORKDIR /app
+
+# Dependencias primero (capa cacheada)
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Código de la aplicación (sin venv/logs/.env: ver .dockerignore)
+COPY . .
+
+RUN mkdir -p /app/logs && chown -R appuser:appuser /app
+USER appuser
+
+EXPOSE 8100
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD curl -fsS http://127.0.0.1:8100/api/health || exit 1
+
+CMD ["sh", "-c", "exec uvicorn web.app:app --host 0.0.0.0 --port ${APP_PORT:-8100}"]

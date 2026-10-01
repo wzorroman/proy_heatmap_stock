@@ -39,7 +39,7 @@ Colores semánticos: **verde** = positivo/alcista, **rojo** = negativo/bajista, 
 
 ## Requisitos
 
-- Python **3.10+** (venv local)
+- Python **3.10+** (venv local) — o **Podman/Docker** para deploy contenedorizado (ver checklist de producción)
 - Acceso a PostgreSQL `heatmap_stock` (por defecto `192.168.18.121:5432`)
 - Librerías frontend ya **vendorizadas** en `web/static/vendor/` (ECharts 6.1.0, HTMX 2.0.11)
 
@@ -109,16 +109,146 @@ cd ../proy_bd_heatmap
 
 ---
 
-## Deploy
+## Deploy en producción — pasos iniciales (checklist)
 
-### Arranque persistente (`nohup`)
+> **Regla de oro del despliegue actual:** el contenedor (o systemd) **solo corre la web**
+> (lectura). La **escritura** la siguen haciendo los **crones del servidor** como `appuser`
+> (`persist_score` cada 3 min, watchdog cada 10 min, scrapers, heatmap). No moverlos al contenedor.
+
+### 1) Servidor y prerequisitos
+
+- [ ] Acceso SSH al servidor de cronjobs (donde vive `/opt/proy_heatmap_stock`) con usuario `appuser`.
+- [ ] Podman + podman-compose instalados (alternativa: Docker 24+):
+  ```bash
+  podman --version && podman-compose version
+  ```
+- [ ] Rootless funcionando (el deploy no requiere root): verificar subuids del usuario:
+  ```bash
+  grep appuser /etc/subuid /etc/subgid    # debe mostrar p. ej. 100000:65536
+  ```
+- [ ] Red abierta hacia la BD: `192.168.18.121:5432` (o el host de `BD_HEATMAP_HOST`):
+  ```bash
+  timeout 3 bash -c 'cat < /dev/null > /dev/tcp/192.168.18.121/5432' && echo OK
+  ```
+- [ ] Puerto `8100` libre en el host: `ss -ltnp | grep 8100` (si systemd/nohup lo tiene ocupado, detenerlo antes).
+
+### 2) Código y configuración
+
+- [ ] Actualizar el repo en `<BASE>/proy_heatmap_stock` (o clonar si es la primera vez):
+  ```bash
+  cd /opt/proy_heatmap_stock && git pull
+  ```
+- [ ] Crear el `.env` del dashboard desde el ejemplo (NUNCA versionar):
+  ```bash
+  cd <BASE>/proy_heatmap_stock/proy_dashboard
+  cp .env.example .env
+  ```
+- [ ] Editar `.env`: `BD_HEATMAP_HOST/PORT/DATABASE/USER/PASSWORD` reales, `APP_ENV=prod`,
+  `APP_PORT=8100`, `APP_TIMEZONE` de visualización, `FILE_PATH_LOG=./logs`.
+- [ ] Permisos estrictos al `.env` (contiene la clave de BD): `chmod 600 .env`.
+- [ ] Confirmar que `config_dashboard.json` trae los parámetros de negocio deseados
+  (pesos del score, zonas, `history_hours_default`, umbrales del watchdog).
+
+### 3) Base de datos
+
+- [ ] Verificar migraciones aplicadas (tablas del score existentes):
+  ```sql
+  SELECT table_name FROM information_schema.tables
+  WHERE table_schema='public' AND table_name LIKE 'fact_market_score%';
+  -- esperado: fact_market_score, fact_market_score_agg (+ particiones mensuales)
+  ```
+- [ ] Si faltan (deploy virgen): aplicar desde `proy_bd_heatmap`:
+  ```bash
+  cd <BASE>/proy_heatmap_stock/proy_bd_heatmap
+  ./venv/bin/alembic upgrade head       # aplica 0009 y restantes
+  ```
+- [ ] Confirmar que el usuario de `BD_HEATMAP_USER` puede SELECT/INSERT sobre las tablas del score.
+
+### 4) Opción A (recomendada): contenedor con Podman
+
+- [ ] Construir la imagen (usa `Containerfile`; excludes de `.dockerignore` evitan hornear `.env`/`venv`/`logs`):
+  ```bash
+  cd <BASE>/proy_heatmap_stock/proy_dashboard
+  podman build -t localhost/proy_dashboard:latest -f Containerfile .
+  ```
+- [ ] Levantar con compose (una imagen, un servicio `dashboard`; `DB_WRITE_ENABLED=false` explícito):
+  ```bash
+  podman-compose up -d --build
+  ```
+- [ ] Arranque automático tras reboot del host (podman socket systemd/user o quadlet):
+  ```bash
+  systemctl --user enable --now podman.socket   # si usas `podman compose` v2
+  ```
+- [ ] Comprobar salud del contenedor (`healthy` tarda ~10 s):
+  ```bash
+  podman ps --filter name=proy_dashboard
+  podman inspect --format '{{.State.Health.Status}}' proy_dashboard   # → healthy
+  curl -s http://localhost:8100/api/health | python3 -m json.tool
+  ```
+
+### 5) Opción B (alternativa): venv directo + systemd
+
+- [ ] Crear venv e instalar dependencias:
+  ```bash
+  cd <BASE>/proy_heatmap_stock/proy_dashboard
+  python3 -m venv venv && ./venv/bin/pip install -r requirements.txt
+  ```
+- [ ] Instalar el unit `/etc/systemd/system/proy_dashboard.service` (ver al final de esta sección)
+  con `User=appuser`, `EnvironmentFile=<BASE>/proy_heatmap_stock/proy_dashboard/.env`.
+- [ ] `sudo systemctl daemon-reload && sudo systemctl enable --now proy_dashboard`.
+- [ ] `systemctl status proy_dashboard --no-pager` → `active (running)`.
+
+### 6) Cron en el SERVIDOR (sigue igual con A o B)
+
+- [ ] Entradas del score ya instaladas en el crontab de `appuser` (verificar con `crontab -l`):
+  ```cron
+  CRON_TZ=America/New_York
+  # --- H · SCORE DASHBOARD (cada 3 min, +2 min del radar) ---
+  3-59/3 0-23 * * 1-4 <BASE>/proy_heatmap_stock/proy_dashboard/run_persist_score.sh --cycle >> <BASE>/proy_heatmap_stock/proy_dashboard/logs/cron_persist_score.log 2>&1
+  3-59/3 0-16 * * 5    <BASE>/proy_heatmap_stock/proy_dashboard/run_persist_score.sh --cycle >> <BASE>/proy_heatmap_stock/proy_dashboard/logs/cron_persist_score.log 2>&1
+  # --- watchdog de frescura (cada 10 min) ---
+  */10 * * * * <BASE>/proy_heatmap_stock/proy_dashboard/run_check_score_freshness.sh >> <BASE>/proy_heatmap_stock/proy_dashboard/logs/cron_check_score_freshness.log 2>&1
+  ```
+- [ ] **Importante:** el launcher `run_persist_score.sh` carga el **mismo `.env`** del paso 2;
+  ahí `DB_WRITE_ENABLED` debe quedar en **`true`** (los crones escriben; el contenedor web no).
+- [ ] Los cron jobs **usan el venv del host**, no el contenedor: si solo vas a contenedor y
+  no quieres el venv, cambia el launcher por `podman run --rm --env-file .env proy_dashboard python jobs/persist_score.py --cycle`.
+- [ ] El radar arranca en `1-59/3`; `3-59/3` corre ~2 min después, con `latest_market_tick` ya escrito.
+- [ ] El job usa `flock` (`/tmp/proy_dashboard_persist_score.lock`) para evitar solapamientos.
+- [ ] **Redirigir siempre la salida** (`>> ... 2>&1`): sin `MAILTO` ni redirección, cron descarta
+  la salida y un fallo queda invisible.
+- [ ] Prueba manual como usuario de cron (**nunca como root**):
+  ```bash
+  sudo -u appuser <BASE>/proy_heatmap_stock/proy_dashboard/run_persist_score.sh --cycle --dry-run
+  sudo -u appuser <BASE>/proy_heatmap_stock/proy_dashboard/run_check_score_freshness.sh; echo $?  # 0 fresco · 5 rancio · 4 precondición local
+  ```
+
+### 7) Verificación final del deploy
+
+- [ ] Dashboard visible: `http://<servidor>:8100/` (sin errores de consola en el navegador).
+- [ ] `/api/health` → `status: OK` y `data.edad_s` < 240 (score fresco alimentado por el cron).
+- [ ] Panel *Evolución del score* creciendo punto a punto cada 3 min (confirmado mirando `max(timestamp_utc)`).
+- [ ] Logs del cron con entradas `escrito detalle=… agg=1` cada 3 min:
+  ```bash
+  tail -f <BASE>/proy_heatmap_stock/proy_dashboard/logs/cron_persist_score.log
+  ```
+
+### 8) Actualizar / rollback (Opción A)
 
 ```bash
-cd /opt/proy_heatmap_stock/proy_dashboard
-nohup ./run_dashboard.sh > logs/uvicorn.out 2>&1 &
+cd <BASE>/proy_heatmap_stock/proy_dashboard
+git pull
+podman-compose up -d --build          # nueva imagen; el anterior se reemplaza
+# rollback:
+podman tag localhost/proy_dashboard:<versión-anterior> localhost/proy_dashboard:latest
+podman-compose up -d
 ```
 
-### Servicio systemd (recomendado)
+> El **cron no se toca** al actualizar la imagen: usa el código del host (venv). Si algún día
+> el cron debe usar el código contenerizado, cambiar el launcher (paso 6).
+
+<details>
+<summary>Unit systemd de referencia (Opción B)</summary>
 
 `/etc/systemd/system/proy_dashboard.service`:
 
@@ -138,39 +268,9 @@ EnvironmentFile=/opt/proy_heatmap_stock/proy_dashboard/.env
 WantedBy=multi-user.target
 ```
 
-```bash
-sudo systemctl daemon-reload && sudo systemctl enable --now proy_dashboard
-```
+</details>
 
 > Puerto **8100** separado: no interrumpe scraper, calendario ni notificador.
-
-### Cron del score (cada 3 min, offset +2 del radar)
-
-> Esta es la **entrada H** a agregar en el crontab del servidor
-> (TZ del servidor = ET). No se instala desde este README; requiere acceso al servidor.
-
-```cron
-# ============================================================
-# proy_dashboard · score de mercado (cada 3 min)
-# <BASE> = directorio raíz del monorepo (ej. /opt/proy_heatmap_stock)
-# ============================================================
-
-# --- H · SCORE DASHBOARD (+2 min del radar, cada 3 min) ---
-3-59/3 0-23 * * 1-4 cd <BASE>/proy_dashboard && set -a && . ./.env && set +a && ./venv/bin/python jobs/persist_score.py --cycle
-3-59/3 0-16 * * 5    cd <BASE>/proy_dashboard && set -a && . ./.env && set +a && ./venv/bin/python jobs/persist_score.py --cycle
-```
-
-Equivalente usando el launcher (con log, recomendado):
-
-```cron
-3-59/3 0-23 * * 1-4 <BASE>/proy_dashboard/run_persist_score.sh --cycle >> <BASE>/proy_dashboard/logs/cron_persist_score.log 2>&1
-3-59/3 0-16 * * 5    <BASE>/proy_dashboard/run_persist_score.sh --cycle >> <BASE>/proy_dashboard/logs/cron_persist_score.log 2>&1
-```
-
-- El radar arranca en `1-59/3`; `3-59/3` corre ~2 min después, con `latest_market_tick` ya escrito.
-- El job usa `flock` (`/tmp/proy_dashboard_persist_score.lock`) para evitar solapamientos.
-- **Redirige siempre la salida** (`>> ... 2>&1`). Sin `MAILTO` ni redirección, cron descarta
-  la salida y un fallo queda invisible. El job también escribe a `logs/`.
 
 ### Watchdog de frescura del score (cada 10 min)
 
@@ -233,6 +333,9 @@ proy_dashboard/
 ├── jobs/          persist_score (--cycle/--backfill/--dry-run)
 ├── tests/         pytest por capa
 ├── config_dashboard.json   parámetros de negocio (única fuente)
+├── Containerfile  imagen de producción (Podman/Docker, rootless, no-root, healthcheck)
+├── compose.yml    servicio `dashboard` (web; los cron jobs siguen en el host)
+├── .dockerignore  excluye .env/venv/logs de la imagen
 └── ROADMAP_prototipo.md
 ```
 

@@ -42,6 +42,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Deploy contenedorizado (Podman/Docker, rootless)**: nuevo `Containerfile` (python:3.13-slim, usuario no-root `appuser` uid 10001, `HEALTHCHECK` sobre `/api/health`, puerto 8100), `compose.yml` con **solo el servicio web** — los cron jobs de escritura (`persist_score`, watchdog) **siguen en el crontab del servidor** y el contenedor marca `DB_WRITE_ENABLED=false` de forma explícita — y `.dockerignore` que excluye `.env`, `venv/` y `logs/` de la imagen.
+- **README: checklist de despliegue en producción** (`Deploy en producción — pasos iniciales`): 8 fases con casos de prueba y comandos — prerequisitos del servidor (rootless/subuid/red/puerto), `.env` y permisos, estado de migraciones, Opción A Podman (build/compose/health), Opción B systemd, sección dedicada al **cron del servidor que permanece igual**, verificación final y update/rollback.
 - **Favicon del dashboard**: `web/static/favicon.svg` (+ `favicon.png`/`favicon.ico` de respaldo) con el motivo de marca — diamante ◈ azul/cian sobre fondo `#0d1117`; enlazado en `base.html` con cache-buster `?v=`.
 - `charts.line_option()` acepta `mark_lines` (separadores de día), `market_hours` (ventanas de sesión), `market_open_lines` + `market_open_label` (apertura NY) y el helper `charts._vertical_markline()` — markLine vertical por par de coordenadas `[idx, y0]→[idx, y1]`, formato que sí respeta el eje de categorías.
 - Nota del panel *Evolución del score de mercado*: **leyenda con muestras de color** — `n ciclos · ▮ medianoche · ▮ apertura NY HH:MM <TZ>`; la hora de apertura se convierte dinámicamente a `APP_TIMEZONE` (p. ej. `08:30 PE` con NY en EDT).

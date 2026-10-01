@@ -1,0 +1,12 @@
+# No versionar ni hornear en la imagen
+.env
+venv/
+logs/
+__pycache__/
+**/__pycache__/
+*.pyc
+.pytest_cache/
+docs/
+ROADMAP_prototipo.md
+CHANGELOG.md
+.git/
