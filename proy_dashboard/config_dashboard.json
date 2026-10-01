@@ -14,6 +14,7 @@
     "treemap_max": 1000,
     "sector_min_assets": 5,
     "history_hours_default": 24,
+    "score_max_age_min": 20,
     "heatmap_windows": 12,
     "rsi_scatter_n": 25,
     "sector_signal_scale": 15

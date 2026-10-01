@@ -74,6 +74,20 @@ class ScoreRepository(BaseRepository):
             "SELECT * FROM fact_market_score_agg ORDER BY timestamp_utc DESC LIMIT 1"
         )
 
+    def fetch_agg_edad_minutos(self) -> Optional[float]:
+        """Minutos desde el último ciclo agregado.
+
+        Devuelve ``None`` si la tabla está vacía (no hay ningún ciclo), que el
+        watchdog trata como rancio. ``now()`` y ``timestamp_utc`` son timestamptz,
+        así que la resta es un interval sin ambigüedad de zona horaria.
+        """
+        row = self.fetch_one(
+            "SELECT now() - max(timestamp_utc) AS edad FROM fact_market_score_agg"
+        )
+        if not row or row.get("edad") is None:
+            return None
+        return row["edad"].total_seconds() / 60.0
+
     def fetch_agg_history(
         self, since: datetime, until: Optional[datetime] = None
     ) -> list[dict]:

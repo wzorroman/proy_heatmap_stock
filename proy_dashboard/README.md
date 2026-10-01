@@ -160,15 +160,40 @@ sudo systemctl daemon-reload && sudo systemctl enable --now proy_dashboard
 3-59/3 0-16 * * 5    cd <BASE>/proy_dashboard && set -a && . ./.env && set +a && ./venv/bin/python jobs/persist_score.py --cycle
 ```
 
-Equivalente usando el launcher:
+Equivalente usando el launcher (con log, recomendado):
 
 ```cron
-3-59/3 0-23 * * 1-4 <BASE>/proy_dashboard/run_persist_score.sh --cycle
-3-59/3 0-16 * * 5    <BASE>/proy_dashboard/run_persist_score.sh --cycle
+3-59/3 0-23 * * 1-4 <BASE>/proy_dashboard/run_persist_score.sh --cycle >> <BASE>/proy_dashboard/logs/cron_persist_score.log 2>&1
+3-59/3 0-16 * * 5    <BASE>/proy_dashboard/run_persist_score.sh --cycle >> <BASE>/proy_dashboard/logs/cron_persist_score.log 2>&1
 ```
 
 - El radar arranca en `1-59/3`; `3-59/3` corre ~2 min después, con `latest_market_tick` ya escrito.
 - El job usa `flock` (`/tmp/proy_dashboard_persist_score.lock`) para evitar solapamientos.
+- **Redirige siempre la salida** (`>> ... 2>&1`). Sin `MAILTO` ni redirección, cron descarta
+  la salida y un fallo queda invisible. El job también escribe a `logs/`.
+
+### Watchdog de frescura del score (cada 10 min)
+
+> Detecta un `persist_score` caído en ~10 min en lugar de en horas. Fue el fallo
+> real de producción: el score quedó 16 h sin actualizarse sin que nadie se enterara.
+
+```cron
+*/10 * * * * <BASE>/proy_dashboard/run_check_score_freshness.sh >> <BASE>/proy_dashboard/logs/cron_check_score_freshness.log 2>&1
+```
+
+- Entry point: `run_check_score_freshness.sh` → `jobs/check_score_freshness.py`.
+- Umbral: `panels.score_max_age_min` en `config_dashboard.json` (default **20 min**);
+  se puede forzar con `--max-edad-min N`.
+- La tabla vacía (sin ningún ciclo) cuenta como rancio.
+- **Códigos de salida:** `0` fresco · `1` error · `2` argumentos · `3` BD no configurada ·
+  `4` precondición local (falta `.env`, falta `venv` o `logs/` no escribible) · `5` rancio.
+
+Prueba manual (siempre como el usuario de cron, **nunca como root**):
+
+```bash
+sudo -u appuser <BASE>/proy_dashboard/run_check_score_freshness.sh
+echo $?   # 0 si el score está fresco; 5 si lleva más de 20 min parado
+```
 
 ---
 

@@ -17,7 +17,7 @@ sesiones puntuales (`SKIPPED` fuera de ventana NYSE). Esto deja ventanas de dato
 obsoletos (equity/ETF con ~153 min de antigüedad) y sin **certificación de cierre**
 (`close_quality` 100% `unknown`).
 
-Este informe registra los **7 cronjobs** que llevan el ecosistema a operación
+Este informe registra los **8 cronjobs** que llevan el ecosistema a operación
 autónoma 24/5:
 
 | Job | What | Resultado operativo |
@@ -29,6 +29,7 @@ autónoma 24/5:
 | E | Barras 15 min | Materialización `fact_market_bar_15m` (OHLCV) |
 | F | Suite de calidad (F4.8) | Informe nocturno de salud de la BD |
 | G | Monitor de alertas (F3.11) | Telegram si hay datos obsoletos / 429 / escritura off |
+| H | Score dashboard + watchdog | Ciclos → `fact_market_score_agg`; alerta si el score deja de refrescarse |
 
 ---
 
@@ -43,6 +44,8 @@ autónoma 24/5:
 | E | `<BASE>/proy_scrapping_detail/scripts/build_market_bar_15m.py` | `1,16,31,46 * * * *` | 24/5 | idem A |
 | F | `<BASE>/proy_bd_heatmap/scripts/suite_calidad_nocturna.py` | `5 4 * * *` | diario 04:05 | `<BASE>/proy_bd_heatmap/venv/bin/python3` |
 | G | `<BASE>/proy_scrapping_detail/monitor_alertas.py` | `*/5 * * * *` | Lun–Jue 00–23, Vie 00–16 | idem A |
+| H | `<BASE>/proy_dashboard/run_persist_score.sh` | `3-59/3 * * * *` | Lun–Jue 00–23, Vie 00–16 | `<BASE>/proy_dashboard/venv/bin/python` |
+| H′ | `<BASE>/proy_dashboard/run_check_score_freshness.sh` | `*/10 * * * *` | 24/5 | idem H |
 
 > Nota: con la convención ET del servidor, `04:05 ET` ≈ `08:05 UTC`.
 
@@ -193,6 +196,49 @@ autónoma 24/5:
     (sin token: solo loguea warning, no mata al proceso).
 - **Exit:** 0 siempre (mejor esfuerzo).
 
+### H · Score dashboard + watchdog de frescura
+
+Dos entradas con el mismo carril de datos: el job que **escribe** el score y el
+watchdog que **verifica** que sigue escribiéndose.
+
+#### H1 · Persistencia del score
+
+- **Entry point:** `<BASE>/proy_dashboard/run_persist_score.sh --cycle`
+  → `jobs/persist_score.py`
+- **Venv:** `<BASE>/proy_dashboard/venv/bin/python`
+- **Cron:**
+  ```
+  3-59/3 0-23 * * 1-4 <BASE>/proy_dashboard/run_persist_score.sh --cycle >> <BASE>/proy_dashboard/logs/cron_persist_score.log 2>&1
+  3-59/3 0-16 * * 5    <BASE>/proy_dashboard/run_persist_score.sh --cycle >> <BASE>/proy_dashboard/logs/cron_persist_score.log 2>&1
+  ```
+- **Justificación:** corre ~2 min después del radar (`1-59/3`), cuando
+  `latest_market_tick` ya está escrito. Escribe `fact_market_score(_agg)`.
+- **Redirección obligatoria:** el job escribe a `logs/` y a stdout. Sin `MAILTO` ni
+  `>>`, cron descarta la salida y un fallo queda invisible.
+- **`flock`:** `/tmp/proy_dashboard_persist_score.lock` evita solapamientos.
+- **Exit:** `0` ok · `1` error · `2` argumentos · `3` BD no configurada.
+
+#### H2 · Watchdog de frescura
+
+- **Entry point:** `<BASE>/proy_dashboard/run_check_score_freshness.sh`
+  → `jobs/check_score_freshness.py`
+- **Venv:** `<BASE>/proy_dashboard/venv/bin/python`
+- **Cron:**
+  ```
+  */10 * * * * <BASE>/proy_dashboard/run_check_score_freshness.sh >> <BASE>/proy_dashboard/logs/cron_check_score_freshness.log 2>&1
+  ```
+- **Justificación:** falla si `now() - max(timestamp_utc)` en `fact_market_score_agg`
+  supera el umbral (`panels.score_max_age_min` en `config_dashboard.json`, default
+  **20 min**). Detecta un H1 caído en ~10 min en lugar de en horas. La tabla vacía
+  cuenta como rancio.
+- **Exit:** `0` fresco · `1` error · `2` argumentos · `3` BD no configurada ·
+  `4` precondición local (falta `.env`, falta `venv`, `logs/` no escribible) · `5` rancio.
+- **Override:** `--max-edad-min N` fuerza el umbral sin tocar la config.
+
+> **Regla de oro:** los jobs de `proy_dashboard` se prueban **siempre como `appuser`**
+> (`sudo -u appuser ...`), nunca como root. Ejecutarlos como root crea artefactos en
+> `logs/` y `/tmp` que `appuser` no puede escribir, y el cron se rompe en silencio.
+
 ---
 
 ## 4. Entradas crontab listas para copiar
@@ -237,6 +283,13 @@ autónoma 24/5:
 # --- G · MONITOR DE ALERTAS (F3.11, cada 5 min en ventana) ---
 */5 0-23 * * 1-4 cd <BASE>/proy_scrapping_detail && set -a && . ./.env && set +a && ./venv/bin/python monitor_alertas.py
 */5 0-16 * * 5    cd <BASE>/proy_scrapping_detail && set -a && . ./.env && set +a && ./venv/bin/python monitor_alertas.py
+
+# --- H1 · SCORE DASHBOARD (+2 min del radar, cada 3 min) ---
+3-59/3 0-23 * * 1-4 <BASE>/proy_dashboard/run_persist_score.sh --cycle >> <BASE>/proy_dashboard/logs/cron_persist_score.log 2>&1
+3-59/3 0-16 * * 5    <BASE>/proy_dashboard/run_persist_score.sh --cycle >> <BASE>/proy_dashboard/logs/cron_persist_score.log 2>&1
+
+# --- H2 · WATCHDOG DE FRESCURA DEL SCORE (cada 10 min) ---
+*/10 * * * * <BASE>/proy_dashboard/run_check_score_freshness.sh >> <BASE>/proy_dashboard/logs/cron_check_score_freshness.log 2>&1
 ```
 
 **Instalación realizada**
@@ -333,6 +386,29 @@ CRON_TZ=America/New_York
 2-59/9 0-16 * * 5    cd /opt/proy_heatmap_stock/proy_scrapping_detail && set -a && . ./.env && set +a && ./venv/bin/python3 monitor_alertas.py
 
 # --- proy_dashboard · score de mercado (cada 3 min)
-3-59/3 0-23 * * 1-4 /opt/proy_heatmap_stock/proy_dashboard/run_persist_score.sh --cycle
-3-59/3 0-16 * * 5   /opt/proy_heatmap_stock/proy_dashboard/run_persist_score.sh --cycle
+3-59/3 0-23 * * 1-4 /opt/proy_heatmap_stock/proy_dashboard/run_persist_score.sh --cycle >> /opt/proy_heatmap_stock/proy_dashboard/logs/cron_persist_score.log 2>&1
+3-59/3 0-16 * * 5   /opt/proy_heatmap_stock/proy_dashboard/run_persist_score.sh --cycle >> /opt/proy_heatmap_stock/proy_dashboard/logs/cron_persist_score.log 2>&1
+
+# --- proy_dashboard · watchdog de frescura del score (cada 10 min)
+*/10 * * * * /opt/proy_heatmap_stock/proy_dashboard/run_check_score_freshness.sh >> /opt/proy_heatmap_stock/proy_dashboard/logs/cron_check_score_freshness.log 2>&1
  ```
+
+**Verificación tras instalar** (la cabecera `Installed:` es una anotación, no una
+garantía: hay que comprobarla en el host):
+
+```bash
+crontab -u appuser -l | grep -n "proy_dashboard"
+# Debe listar H1 (cada 3 min) y H2 (cada 10 min), ambas con >> a logs/
+
+# ¿El job está escribiendo de verdad?
+crontab -u appuser -l | grep -c run_persist_score          # -> 2
+tail -5 /opt/proy_heatmap_stock/proy_dashboard/logs/cron_persist_score.log
+
+# Frescura real del score (el watchdog resume esto mismo)
+sudo -u appuser /opt/proy_heatmap_stock/proy_dashboard/run_check_score_freshness.sh; echo "exit=$?"
+```
+
+> **Nunca ejecutar los jobs de `proy_dashboard` como root.** Crea `logs/` y
+> `/tmp/proy_dashboard_persist_score.lock` con dueño `root`, y `appuser` (el usuario
+> del cron) deja de poder escribir. El cron muere con `PermissionError` y, sin
+> redirección ni `MAILTO`, sin dejar rastro. Usar siempre `sudo -u appuser`.

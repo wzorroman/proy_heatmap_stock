@@ -53,8 +53,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docs: anexo de implementación y análisis del screener en `docs/informe_graficos_2026-09-30.md`.
 - Docs: sección 5 renombrada a “propuestos e implementados”, con estado por gráfico, **diseño ASCII** y **algoritmo de cálculo** (pseudocódigo) en cada ficha; secciones 1, 4, 6 y 8 alineadas al estado real.
 - Docs: sección **5.8** con la decisión de alcance del Initial Balance: implementar **ambas opciones como subgráficos 5.4a + 5.4b**, con bocetos ASCII y ventana horaria; el total de fichas pasa de 7 a **8** (+1 gráfico).
+- **Watchdog de frescura del score**: nuevo `jobs/check_score_freshness.py` y launcher `run_check_score_freshness.sh` (cron cada 10 min). Falla con exit `5` si `now() - max(timestamp_utc)` en `fact_market_score_agg` supera `panels.score_max_age_min` (default 20 min); tabla vacía cuenta como rancio. Exit `4` para precondiciones locales (falta `.env`, falta `venv`, `logs/` no escribible), que hasta ahora fallaban en silencio. Nuevo `ScoreRepository.fetch_agg_edad_minutos()` y clave `panels.score_max_age_min` en `config_dashboard.json`. Tests en `tests/test_check_score_freshness.py`.
 
 ### Fixed
+
+- `run_check_score_freshness.sh` falla ruidosamente si falta `.env` en lugar de continuar sin configuración (era el modo de fallo que dejó el score 16 h sin actualizarse).
+- Docs: los bloques de cron de `proy_dashboard` incluyen la redirección `>> logs/... 2>&1`; sin ella y sin `MAILTO`, cron descarta la salida y cualquier fallo queda invisible.
 
 - CSS: nueva clase `.screener-table` para tabla sin scroll y fuente más compacta.
 - CSS: se define la variable faltante `--azul: #58a6ff` (afectaba `.brand` y `.velas-symbol-badge`).
