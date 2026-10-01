@@ -18,6 +18,20 @@ def _client():
     return TestClient(app)
 
 
+def test_pagina_principal_muestra_zona_horaria():
+    """El subtítulo indica la zona de visualización (APP_TIMEZONE)."""
+    from core.settings import get_settings
+    from core.timezone import tz_label
+
+    settings = get_settings()
+    with _client() as client:
+        html = client.get("/").text
+
+    assert 'class="tz-badge"' in html
+    assert settings.timezone in html
+    assert tz_label(settings.timezone) in html
+
+
 def test_pagina_principal():
     with _client() as client:
         r = client.get("/")
@@ -161,6 +175,20 @@ def test_ib_acciones_mismo_orden_que_screener():
     syms_ib = re.findall(r'data-symbol="([^"]+)"', ib)
     assert syms_screener
     assert syms_ib == syms_screener
+
+
+def test_ib_acciones_muestra_zona_horaria():
+    """La hora de ruptura lleva al lado su zona (derivada de APP_TIMEZONE)."""
+    from core.settings import get_settings
+    from core.timezone import tz_label
+
+    with _client() as client:
+        r = client.get("/partials/ib_acciones")
+
+    assert r.status_code == 200
+    etiqueta = tz_label(get_settings().timezone)
+    assert 'class="hora-tz"' in r.text
+    assert f'<span class="hora-tz">{etiqueta}</span>' in r.text
 
 
 def test_layout_velas_junto_a_mapa_sectorial():

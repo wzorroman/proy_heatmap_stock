@@ -40,9 +40,15 @@ El dashboard ya tiene un buen esqueleto de **contexto de mercado** (score macro,
 | `latest_market_tick` | Último tick por activo | 123 filas; incluye `rsi_15`, `cci20_15`, `bbpower_15`, `adx_15`, `pivot_r3_15` |
 | `fact_heatmap_snapshot` | Snapshot sectorial | 9 001 filas; última ventana disponible |
 | `fact_economic_event` | Calendario económico | 579 eventos cargados |
-| `fact_market_score` / `fact_market_score_agg` | Score histórico | **No existen en BD** aunque el código las referencia |
+| `fact_market_score` / `fact_market_score_agg` | Score histórico | **Existen** (migración `0009` aplicada) y crecen con el job `persist_score` |
 
 > **Analogía del dato:** la base de datos es como una **cocina bien surtida**: tienes ingredientes frescos (`latest_market_tick`, `fact_market_series`) y otros que se empezaron a secar (`fact_market_bar_15m`). Antes de cocinar los nuevos gráficos hay que revisar la despensa.
+
+> **Convención de zona horaria.** En la BD todo se guarda en **UTC**. Se distinguen dos zonas:
+> - **`MARKET_TZ`** (`America/New_York`, fija): define la *lógica de mercado* — apertura 09:30, rango inicial, fases de sesión. No depende de configuración.
+> - **`APP_TIMEZONE`** (default `America/New_York`): *preferencia de visualización*. Solo cambia cómo se muestran las horas y qué día local se considera "hoy" en el calendario; nunca altera lo que se guarda.
+>
+> El calendario toma la fecha en `APP_TIMEZONE`, la convierte a UTC (`rango_dia_utc`) y filtra `event_timestamp` por esa ventana semiabierta `[inicio, fin)`; luego muestra la hora en `APP_TIMEZONE`.
 
 ---
 
@@ -52,7 +58,7 @@ El dashboard ya tiene un buen esqueleto de **contexto de mercado** (score macro,
 2. **Sin cálculo de VWAP, Bollinger ni S/R a 15 min** → ✅ **Resuelto:** `services/bar_15m_service.py` calcula SMA 9/21, Bollinger 20/2 y VWAP.
 3. **Sin screener 15 min** → ✅ **Resuelto:** `services/screener_15m_service.py` + parcial `/partials/screener_15m` en el dashboard.
 4. **Sin detalle por ticker** → 🟡 **Parcial:** el clic en una fila del screener carga las velas 15m del ticker; falta una página dedicada de análisis.
-5. **Tablas de score histórico no creadas** → ⬜ **Pendiente:** `fact_market_score` / `fact_market_score_agg` siguen sin migración.
+5. **Tablas de score histórico no creadas** → ✅ **Resuelto:** migración `0009` aplicada (`fact_market_score` / `fact_market_score_agg`), pobladas por el job `persist_score` + watchdog de frescura.
 6. **Sin breakout de rango inicial** → ✅ **Resuelto:** `services/initial_balance_service.py` + parcial `/partials/ib_acciones` (5.4a) y pastilla IB integrada en las tarjetas de precio (5.4b).
 7. **Sin mapa sectorial 15m** → ✅ **Resuelto:** `services/sector_15m_service.py` + parcial `/partials/sector_15m` (5.5).
 8. **Sin histograma de score 15m** → ✅ **Resuelto:** `ScoreService.distribucion_15min()` + `/partials/score_15m` (5.6).
@@ -231,6 +237,12 @@ ALGORITMO Confluencia 5m/15m/1D
 - El card independiente "Rango inicial — mercado" fue **eliminado** para no duplicar información; queda espacio reservado en la fila para un próximo gráfico.
 
 Ambos indican explícitamente la **ventana horaria de apertura** `09:30–10:00 NY` (configurable con `ib_minutos`, por defecto 30 min).
+
+> **Zona horaria.** La ventana se ancla **siempre a Nueva York** (`MARKET_TZ`), porque es una
+> definición del mercado: `APP_TIMEZONE` no la mueve. La **hora de ruptura** sí se muestra en la
+> zona de visualización del usuario (`APP_TIMEZONE`), con su etiqueta al lado — p. ej. `09:00 PE`
+> si `APP_TIMEZONE=America/Lima`. Antes de esta separación, un `APP_TIMEZONE` distinto de NY
+> desplazaba la ventana y producía rangos iniciales incorrectos.
 
 **Qué muestra:** las barras de 15m de la apertura regular (09:30–10:00 NY) forman un rango. El panel marca si el precio lo rompió después, con la hora exacta de la ruptura.
 

@@ -55,6 +55,25 @@ def test_business_acceso_anidado(clean_env, empty_env_file, config_file):
     assert [c["logical_key"] for c in comps] == ["VIX", "US10Y", "DXY", "TLT"]
 
 
+def test_timezone_default_new_york(clean_env, empty_env_file, config_file):
+    """Sin `APP_TIMEZONE` la zona de visualización es NY."""
+    settings = load_settings(env_file=empty_env_file, config_path=config_file)
+    assert settings.timezone == "America/New_York"
+
+
+def test_timezone_invalida_cae_a_new_york(clean_env, empty_env_file, config_file):
+    """Un `APP_TIMEZONE` inválido no debe degradar a UTC en silencio."""
+    clean_env.setenv("APP_TIMEZONE", "No/Existe")
+    settings = load_settings(env_file=empty_env_file, config_path=config_file)
+    assert settings.timezone == "America/New_York"
+
+
+def test_timezone_valida_se_respeta(clean_env, empty_env_file, config_file):
+    clean_env.setenv("APP_TIMEZONE", "America/Lima")
+    settings = load_settings(env_file=empty_env_file, config_path=config_file)
+    assert settings.timezone == "America/Lima"
+
+
 def test_log_dir_absoluto_con_env(clean_env, empty_env_file, config_file, tmp_path):
     clean_env.setenv("FILE_PATH_LOG", str(tmp_path / "mis_logs"))
     settings = load_settings(env_file=empty_env_file, config_path=config_file)

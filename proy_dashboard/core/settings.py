@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from dotenv import load_dotenv
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 PROJECT_PATH = Path(__file__).resolve().parent.parent
 DEFAULT_ENV_FILE = PROJECT_PATH / ".env"
@@ -49,6 +50,20 @@ def _get_bool(key: str, default: bool) -> bool:
     if value is None:
         return default
     return value.lower() in ("1", "true", "yes", "on")
+
+
+def _get_tz(key: str, default: str) -> str:
+    """Nombre de zona horaria válido; si falta o no existe, usa `default`.
+
+    `APP_TIMEZONE` es preferencia de visualización: ante un valor ausente o
+    inválido se cae a `America/New_York` (zona de mercado), nunca a UTC.
+    """
+    nombre = _get(key, default) or default
+    try:
+        ZoneInfo(nombre)
+    except (ZoneInfoNotFoundError, ValueError, KeyError):
+        return default
+    return nombre
 
 
 @dataclass(frozen=True)
@@ -135,7 +150,7 @@ def load_settings(
         app_name=_get("APP_NAME", "proy_dashboard") or "proy_dashboard",
         app_env=_get("APP_ENV", "dev") or "dev",
         port=_get_int("APP_PORT", 8100),
-        timezone=_get("APP_TIMEZONE", "America/New_York") or "America/New_York",
+        timezone=_get_tz("APP_TIMEZONE", "America/New_York"),
         log_dir=log_dir,
         retransmisor_id=_get("RETRANSMISOR_ID", "101") or "101",
         log_level=(_get("LOG_LEVEL", "INFO") or "INFO").upper(),

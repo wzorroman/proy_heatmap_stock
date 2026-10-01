@@ -23,6 +23,7 @@ from api.routers import events, health, heatmap, indicators, momentum, risk, sco
 from core.container import Container
 from core.logging_config import get_logger, setup_global_logging
 from core.settings import get_settings
+from core.timezone import tz_label
 from web import views
 from web.templating import templates
 
@@ -77,6 +78,9 @@ def index(request: Request):
             "title": settings.business("app", "title", default="Radar Intermarket"),
             "refresh_ms": settings.business("app", "htmx_refresh_ms", default=30000),
             "version": settings.version,
+            # Zona de visualización (APP_TIMEZONE) para mostrarla en el subtítulo.
+            "timezone": settings.timezone,
+            "tz_label": tz_label(settings.timezone),
             "fase": container.session_service.estado(),
             "placeholders": [
                 ("SMA20/50 de precio", motivo),

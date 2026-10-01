@@ -41,7 +41,8 @@ class EventsRepository(BaseRepository):
             condiciones.append("event_timestamp >= %s")
             params.append(since)
         if until is not None:
-            condiciones.append("event_timestamp <= %s")
+            # Semiabierto: excluye el límite superior para no solapar días.
+            condiciones.append("event_timestamp < %s")
             params.append(until)
 
         sql = _SELECT

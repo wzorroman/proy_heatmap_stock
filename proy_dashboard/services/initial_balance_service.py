@@ -19,7 +19,7 @@ from datetime import timedelta, time
 from typing import Optional
 
 from core.settings import Settings
-from core.timezone import ensure_utc, get_tz, now_utc
+from core.timezone import MARKET_TZ, UTC, ensure_utc, get_tz, now_utc
 from services.bar_15m_service import Bar15mService, _f, _r4
 
 HORA_APERTURA = time(9, 30)
@@ -69,7 +69,7 @@ class InitialBalanceService:
         for symbol in symbols:
             barras = self._barras(symbol, desde)
             fila = self.evaluar(
-                symbol, barras, self.settings.timezone, self._ib_minutos()
+                symbol, barras, MARKET_TZ, self._ib_minutos()
             )
             if fila:
                 out[symbol] = fila
@@ -108,7 +108,7 @@ class InitialBalanceService:
         """Rango inicial de un único símbolo (sin cambiar la ventana configurada)."""
         desde = now_utc() - timedelta(hours=self._horas())
         barras = self._barras(symbol, desde)
-        return self.evaluar(symbol, barras, self.settings.timezone, self._ib_minutos())
+        return self.evaluar(symbol, barras, MARKET_TZ, self._ib_minutos())
 
     # ── internos ─────────────────────────────────────────────────────────────
     def _stocks(self) -> list[str]:
@@ -138,10 +138,14 @@ class InitialBalanceService:
     def evaluar(
         symbol: str,
         barras: list[dict],
-        tz_name: str = "America/New_York",
+        tz_name: str = MARKET_TZ,
         ib_minutos: int = 30,
     ) -> Optional[dict]:
-        """Evalúa el rango inicial de un símbolo sobre sus barras 15m."""
+        """Evalúa el rango inicial de un símbolo sobre sus barras 15m.
+
+        ``tz_name`` ancla la ventana (09:30–10:00) a la zona del mercado, no a la
+        de visualización. El resultado se devuelve en esa misma zona.
+        """
         if len(barras) < 2:
             return None
 
@@ -165,7 +169,7 @@ class InitialBalanceService:
             ib_low = min(_f(b["low"]) for _, b in ib_bars)
             ib_close = _f(ib_bars[-1][1]["close"])
 
-            ruptura, fuerza, hora, close_act = "DENTRO", 0.0, None, None
+            ruptura, fuerza, hora_utc, close_act = "DENTRO", 0.0, None, None
             for l, b in items:
                 if l.time() < fin_ib:
                     continue
@@ -176,12 +180,12 @@ class InitialBalanceService:
                 if c > ib_high:
                     ruptura = "ALCISTA"
                     fuerza = ((c - ib_high) / ib_high * 100.0) if ib_high else 0.0
-                    hora = l.strftime("%H:%M")
+                    hora_utc = l.astimezone(UTC).isoformat()
                     break
                 if c < ib_low:
                     ruptura = "BAJISTA"
                     fuerza = ((ib_low - c) / ib_low * 100.0) if ib_low else 0.0
-                    hora = l.strftime("%H:%M")
+                    hora_utc = l.astimezone(UTC).isoformat()
                     break
 
             if close_act is None:
@@ -196,6 +200,7 @@ class InitialBalanceService:
                 "close": _r4(close_act),
                 "ruptura": ruptura,
                 "fuerza_pct": _r4(fuerza),
-                "hora": hora or "",
+                # Instante de la ruptura en UTC; cada vista lo formatea en su zona.
+                "hora_utc": hora_utc or "",
             }
         return None

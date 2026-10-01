@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import datetime, time, timedelta, timezone
+from datetime import datetime, timedelta
 from typing import Optional
 
 from core.settings import Settings
-from core.timezone import ensure_utc, get_tz, now_utc
+from core.timezone import ensure_utc, now_utc, rango_dia_utc
 
 
 def _f(valor):
@@ -84,7 +84,12 @@ class EventService:
     def eventos_del_dia(
         self, country: Optional[str] = None, nivel: Optional[str] = None
     ) -> list[dict]:
-        """Eventos de HOY (zona de mercado), ya pasados y por venir.
+        """Eventos del **día local** (zona de visualización), pasados y por venir.
+
+        El filtro se hace contra la columna UTC `event_timestamp`: se toma la fecha
+        en `APP_TIMEZONE` (default `America/New_York`), se convierte su medianoche a
+        UTC y se filtra por esa ventana `[inicio, fin)`. La hora se muestra luego en
+        la misma zona.
 
         `country`: ISO-2 o "ALL" (todos). `nivel`: "todos" | "1" (alta) |
         "2" (media) | "3" (baja). Por defecto, los de mayor importancia.
@@ -95,11 +100,8 @@ class EventService:
             nivel = self._cfg("today_importance_level", 1)
         importancia = nivel_a_importancia(nivel)
 
-        tz = get_tz(self.settings.timezone)
         ahora = now_utc()
-        hoy_local = ahora.astimezone(tz).date()
-        inicio = datetime.combine(hoy_local, time.min, tzinfo=tz).astimezone(timezone.utc)
-        fin = inicio + timedelta(days=1)
+        inicio, fin = rango_dia_utc(ahora, self.settings.timezone)
 
         rows = self.events_repo.fetch_eventos(
             country=country,

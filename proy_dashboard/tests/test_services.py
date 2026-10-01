@@ -4,6 +4,7 @@ sesión y health."""
 from datetime import datetime, timedelta, timezone
 
 from core.settings import load_settings
+from core.timezone import get_tz
 from services.event_service import EventService
 from services.health_service import HealthService
 from services.heatmap_service import HeatmapService
@@ -186,6 +187,49 @@ def test_event_proximos(clean_env, empty_env_file, config_file):
 
     assert prox[0]["title"] == "NFP"
     assert prox[0]["sorpresa_pct"] is None
+
+
+class _CapturingEventsRepo:
+    """Captura los kwargs del filtro para inspeccionar la ventana UTC."""
+
+    def __init__(self):
+        self.llamada = None
+
+    def fetch_eventos(self, **kwargs):
+        self.llamada = kwargs
+        return []
+
+
+def test_eventos_del_dia_ventana_utc_desde_medianoche_local(
+    monkeypatch, clean_env, empty_env_file, config_file
+):
+    """El filtro va contra `event_timestamp` (UTC) usando el día local del usuario."""
+    monkeypatch.setenv("APP_TIMEZONE", "America/Lima")
+    settings = _settings(clean_env, empty_env_file, config_file)
+    repo = _CapturingEventsRepo()
+
+    EventService(repo, settings).eventos_del_dia()
+
+    inicio = repo.llamada["since"]
+    fin = repo.llamada["until"]
+    # Arranca en la medianoche local (00:00 en Lima) y dura un día exacto.
+    assert inicio.astimezone(get_tz("America/Lima")).strftime("%H:%M") == "00:00"
+    assert fin - inicio == timedelta(days=1)
+
+
+def test_eventos_del_dia_cambia_de_ventana_con_la_zona(
+    monkeypatch, clean_env, empty_env_file, config_file
+):
+    """NY y Lima definen días distintos: la ventana UTC se desplaza 1 h."""
+    repo_ny = _CapturingEventsRepo()
+    monkeypatch.setenv("APP_TIMEZONE", "America/New_York")
+    EventService(repo_ny, _settings(clean_env, empty_env_file, config_file)).eventos_del_dia()
+
+    repo_pe = _CapturingEventsRepo()
+    monkeypatch.setenv("APP_TIMEZONE", "America/Lima")
+    EventService(repo_pe, _settings(clean_env, empty_env_file, config_file)).eventos_del_dia()
+
+    assert repo_pe.llamada["since"] - repo_ny.llamada["since"] == timedelta(hours=1)
 
 
 # ── sesión ───────────────────────────────────────────────────────────────────

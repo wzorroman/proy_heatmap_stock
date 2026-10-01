@@ -21,7 +21,7 @@
     <div class="precio-meta">
       <span class="zona zona-{{ c.signal }}">{{ c.signal }}</span>
       {% if c.ib %}
-      <span class="ib-badge ib-{{ c.ib.ruptura|lower }}">IB {{ c.ib.ruptura }}{% if c.ib.hora %} · {{ c.ib.hora }}{% endif %}</span>
+      <span class="ib-badge ib-{{ c.ib.ruptura|lower }}">IB {{ c.ib.ruptura }}{% if c.ib.hora %} · {{ c.ib.hora }} <span class="hora-tz">{{ tz_label }}</span>{% endif %}</span>
       {% else %}
       <span class="ib-badge ib-none">---</span>
       {% endif %}

@@ -16,7 +16,7 @@ class SessionService:
 
     def estado(self, ahora: Optional[datetime] = None) -> dict:
         ahora = ensure_utc(ahora or now_utc())
-        local = to_market_tz(ahora, self.settings)
+        local = to_market_tz(ahora)
         fila = self.session_repo.estado_sesion(local.date())
         if not fila:
             return {"fase": "SIN_DATOS", "is_session": None, "session_date": local.date().isoformat()}

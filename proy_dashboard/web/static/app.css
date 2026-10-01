@@ -62,6 +62,21 @@ body {
 
 .topbar .sub { color: var(--muted); font-size: 0.78rem; }
 
+/* Zona horaria de visualización en el subtítulo (APP_TIMEZONE) */
+.tz-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: var(--azul);
+  background: var(--azul-soft);
+  border: 1px solid var(--azul);
+  vertical-align: middle;
+}
+
 .badge {
   background: #1c242e;
   border: 1px solid var(--border);
@@ -300,6 +315,15 @@ body {
   background: var(--amarillo-soft);
   border: 1px solid var(--amarillo);
   vertical-align: middle;
+}
+/* Zona horaria junto a la hora del rango inicial (ej. "10:00 NY") */
+.hora-tz {
+  margin-left: 3px;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: var(--muted);
+  opacity: 0.85;
 }
 /* Fila Trading 15 min: misma altura de card y de gráfico en las 3 columnas */
 .card-trading { display: flex; flex-direction: column; height: 100%; }

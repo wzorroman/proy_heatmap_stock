@@ -254,24 +254,50 @@ def test_ib_ruptura_alcista():
     assert fila["ruptura"] == "ALCISTA"
     assert fila["ib_high"] == 102.0
     assert fila["ib_low"] == 99.0
-    assert fila["hora"] == "10:00"
+    assert fila["hora_utc"] == "2026-09-30T14:00:00+00:00"
     assert fila["fuerza_pct"] == pytest.approx(1.4706, abs=0.01)
 
 
 def test_ib_ruptura_bajista():
     fila = InitialBalanceService.evaluar("NASDAQ:X", _ib_barras(cierre_post=98.0))
     assert fila["ruptura"] == "BAJISTA"
-    assert fila["hora"] == "10:00"
+    assert fila["hora_utc"] == "2026-09-30T14:00:00+00:00"
 
 
 def test_ib_dentro_del_rango():
     fila = InitialBalanceService.evaluar("NASDAQ:X", _ib_barras(cierre_post=101.0))
     assert fila["ruptura"] == "DENTRO"
-    assert fila["hora"] == ""
+    assert fila["hora_utc"] == ""
 
 
 def test_ib_sin_barras():
     assert InitialBalanceService.evaluar("NASDAQ:X", []) is None
+
+
+def test_ib_ventana_es_ny_aunque_app_tz_sea_lima(
+    monkeypatch, clean_env, empty_env_file, config_file
+):
+    """La ventana 09:30–10:00 es de NY; APP_TIMEZONE solo cambia la visualización.
+
+    Si la ventana se anclara a Lima (14:30–15:00 UTC) no habría barras IB en el
+    fixture (13:30/13:45/14:00 UTC) y el resultado sería None.
+    """
+    monkeypatch.setenv("APP_TIMEZONE", "America/Lima")
+    settings = _settings(clean_env, empty_env_file, config_file)
+    assert settings.timezone == "America/Lima"
+
+    svc = InitialBalanceService(
+        FakeBarRepo(_ib_barras("NASDAQ:X", cierre_post=103.5)),
+        FakeLatestTickRepo([]),
+        settings,
+    )
+    lote = svc.evaluar_lote(["NASDAQ:X"])
+
+    assert lote["NASDAQ:X"]["ruptura"] == "ALCISTA"
+    assert lote["NASDAQ:X"]["ib_high"] == 102.0
+    assert lote["NASDAQ:X"]["ib_low"] == 99.0
+    # El instante de ruptura se expone en UTC (la vista lo formatea).
+    assert lote["NASDAQ:X"]["hora_utc"] == "2026-09-30T14:00:00+00:00"
 
 
 def test_ib_scan_prioriza_rupturas(clean_env, empty_env_file, config_file):

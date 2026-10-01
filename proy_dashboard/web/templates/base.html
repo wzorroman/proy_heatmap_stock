@@ -14,7 +14,10 @@
   <header class="topbar">
     <div>
       <div class="brand">◈ {{ title|default("Radar Intermarket") }}</div>
-      <div class="sub">Contexto de mercado · PostgreSQL <code>heatmap_stock</code></div>
+      <div class="sub">
+        Contexto de mercado · PostgreSQL <code>heatmap_stock</code>
+        <span class="tz-badge" title="Zona horaria de visualización (APP_TIMEZONE)">{{ timezone|default("America/New_York") }} · {{ tz_label|default("NY") }}</span>
+      </div>
     </div>
     <div class="legend">
       <span><i class="dot v"></i>positivo</span>

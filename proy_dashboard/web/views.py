@@ -13,7 +13,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
 from core.container import Container
-from core.timezone import ensure_utc, get_tz, now_utc
+from core.timezone import ensure_utc, format_hora, get_tz, now_utc, tz_label
 from web import charts
 from web.logos import logo_url
 from web.templating import templates
@@ -307,11 +307,14 @@ def precios(request: Request):
     c = _container(request)
     tarjetas = c.precio_service.analisis_todas()
     ib_simbolos = set(c.initial_balance_service.mercado_simbolos())
+    tz = c.settings.timezone
     for t in tarjetas:
         t["ib"] = None
         t["logo"] = logo_url(t["symbol"])
         if t.get("symbol") in ib_simbolos and not t.get("sin_datos"):
             t["ib"] = c.initial_balance_service.evaluar_symbol(t["symbol"])
+            if t["ib"]:
+                t["ib"]["hora"] = format_hora(t["ib"].get("hora_utc"), tz)
         if t.get("sin_datos"):
             t["accent"] = charts.MUTED
             continue
@@ -319,7 +322,11 @@ def precios(request: Request):
         t["accent"] = {"COMPRAR": charts.VERDE, "VENDER": charts.ROJO}.get(
             t["signal"], charts.AMARILLO
         )
-    return templates.TemplateResponse(request, "partials/precios.html", {"tarjetas": tarjetas})
+    return templates.TemplateResponse(
+        request,
+        "partials/precios.html",
+        {"tarjetas": tarjetas, "tz_label": tz_label(tz)},
+    )
 
 
 @router.get("/score_history", response_class=HTMLResponse)
@@ -608,6 +615,7 @@ def ib_acciones(request: Request):
     filas_screener, _, _ = _screener_filas(c)
     symbols = [f["symbol"] for f in filas_screener]
     ib_por_symbol = c.initial_balance_service.evaluar_lote(symbols)
+    tz = c.settings.timezone
 
     filas = []
     for symbol in symbols:
@@ -621,9 +629,11 @@ def ib_acciones(request: Request):
                 "close": None,
                 "ruptura": None,
                 "fuerza_pct": None,
-                "hora": "",
+                "hora_utc": "",
                 "sin_datos": True,
             }
+        # La ventana se calcula en NY; la hora se muestra en la zona del usuario.
+        fila["hora"] = format_hora(fila.get("hora_utc"), tz)
         fila["logo"] = logo_url(symbol)
         filas.append(fila)
 
@@ -638,6 +648,7 @@ def ib_acciones(request: Request):
             "total": len(filas),
             "n_rupturas": n_rupturas,
             "ib_minutos": c.initial_balance_service.ib_minutos(),
+            "tz_label": tz_label(tz),
         },
     )
 
