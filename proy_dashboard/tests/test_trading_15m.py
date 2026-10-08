@@ -1,16 +1,21 @@
 """Tests de los servicios de trading a 15 min."""
 
-from datetime import datetime, timezone
+from datetime import datetime, time as dtime, timedelta, timezone
 
 import pytest
 
 from core.settings import load_settings
+from core.timezone import get_tz, now_utc
 from services.bar_15m_service import Bar15mService
+from services.bollinger_15m_service import Bollinger15mService
 from services.confluencia_service import ConfluenciaService
+from services.divergencia_5m_service import Divergencia5mService
 from services.divergencia_service import DivergenciaService
 from services.initial_balance_service import InitialBalanceService
 from services.screener_15m_service import Screener15mService
 from services.sector_15m_service import Sector15mService
+from services.tendencia_15m_service import Tendencia15mService
+from services.vwap_ib_service import VwapIbService
 
 UTC = timezone.utc
 
@@ -114,7 +119,8 @@ def test_ensamblar_ticks_agrupa_15m():
 
 def test_analyze_genera_senal_compra(clean_env, empty_env_file, config_file):
     settings = _settings(clean_env, empty_env_file, config_file)
-    base = datetime(2026, 9, 30, 14, 0, 0, tzinfo=UTC)
+    # Anclado al presente: 25 barras de 15m caben en la ventana por defecto (48 h).
+    base = now_utc() - timedelta(hours=6)
     barras = [
         {
             "symbol": "NASDAQ:TEST",
@@ -164,7 +170,8 @@ def test_screener_signal_neutral_adx_bajo():
 
 def test_screener_scan(clean_env, empty_env_file, config_file):
     settings = _settings(clean_env, empty_env_file, config_file)
-    base = datetime(2026, 9, 30, 14, 0, 0, tzinfo=UTC)
+    # Anclado al presente: 12 barras de 15m caben en la ventana por defecto (48 h).
+    base = now_utc() - timedelta(hours=3)
     barras = [
         {"symbol": "NASDAQ:A", "timestamp_utc": base + _minutes(i * 15),
          "open": 10.0, "high": 11.0, "low": 9.0, "close": 10.0 + i * 0.1, "volume": 1000.0}
@@ -217,6 +224,31 @@ def test_confluencia_score_venta():
     assert ConfluenciaService.score_confluencia(s5, s15, s1d) == (-3, "VENDER", "rojo")
 
 
+def test_confluencia_setup_con_volumen(clean_env, empty_env_file, config_file):
+    settings = _settings(clean_env, empty_env_file, config_file)
+    indicators = [
+        {"symbol": "NASDAQ:A", "tf": "5", "rsi": 55.0, "change_pct": 0.2},
+        {"symbol": "NASDAQ:A", "tf": "15", "rsi": 60.0, "change_pct": 0.5},
+    ]
+    latest = [{"symbol": "NASDAQ:A", "asset_class": "equity", "rsi": 55.0, "change_pct": 1.0}]
+    svc = ConfluenciaService(FakeIndicatorRepo(indicators), FakeLatestTickRepo(latest), settings)
+
+    alta = svc.scan(vol_map={"NASDAQ:A": 1.5})
+    assert alta[0]["setup"] == "ALTA CONVICCIÓN ALCISTA"
+
+    vig = svc.scan(vol_map={"NASDAQ:A": 0.5})
+    assert vig[0]["setup"] == "VIGILAR"
+
+
+def test_vwap_ib_setup():
+    assert VwapIbService.setup("ALCISTA", 105.0, 100.0, 1.2)["lado"] == "LARGO"
+    assert VwapIbService.setup("BAJISTA", 95.0, 100.0, 1.2)["lado"] == "CORTO"
+    assert VwapIbService.setup("ALCISTA", 95.0, 100.0, 1.2) is None   # lado incorrecto
+    assert VwapIbService.setup("ALCISTA", 105.0, 100.0, 0.8) is None  # sin volumen
+    assert VwapIbService.setup("DENTRO", 105.0, 100.0, 1.2) is None
+    assert VwapIbService.setup("ALCISTA", None, 100.0, 1.2) is None
+
+
 def test_confluencia_scan(clean_env, empty_env_file, config_file):
     settings = _settings(clean_env, empty_env_file, config_file)
     indicators = [
@@ -239,9 +271,21 @@ def test_confluencia_scan(clean_env, empty_env_file, config_file):
 
 
 # ── InitialBalanceService ────────────────────────────────────────────────────
-def _ib_barras(symbol="NASDAQ:X", cierre_post=103.5):
-    """IB 09:30–09:45 NY (13:30–13:45 UTC) + una barra posterior a las 10:00."""
-    base = datetime(2026, 9, 30, 13, 30, 0, tzinfo=UTC)
+def _recent_ib_base() -> datetime:
+    """09:30 America/New_York del día anterior, expresado en UTC.
+
+    Ancla el fixture del rango inicial a una sesión reciente para que siempre
+    caiga dentro de la ventana de lookback del servicio, sin depender del día
+    en que se ejecuten los tests.
+    """
+    tz = get_tz("America/New_York")
+    dia = (now_utc().astimezone(tz) - timedelta(days=1)).date()
+    return datetime.combine(dia, dtime(9, 30), tzinfo=tz).astimezone(timezone.utc)
+
+
+def _ib_barras(symbol="NASDAQ:X", cierre_post=103.5, base=None):
+    """IB 09:30–09:45 NY + una barra a las 10:00 NY (anclada a sesión reciente)."""
+    base = base or _recent_ib_base()
     return [
         {"symbol": symbol, "timestamp_utc": base, "open": 99.5, "high": 101.0, "low": 99.0, "close": 100.5},
         {"symbol": symbol, "timestamp_utc": base + _minutes(15), "open": 100.5, "high": 102.0, "low": 100.0, "close": 101.0},
@@ -250,18 +294,20 @@ def _ib_barras(symbol="NASDAQ:X", cierre_post=103.5):
 
 
 def test_ib_ruptura_alcista():
-    fila = InitialBalanceService.evaluar("NASDAQ:X", _ib_barras(cierre_post=103.5))
+    base = _recent_ib_base()
+    fila = InitialBalanceService.evaluar("NASDAQ:X", _ib_barras(cierre_post=103.5, base=base))
     assert fila["ruptura"] == "ALCISTA"
     assert fila["ib_high"] == 102.0
     assert fila["ib_low"] == 99.0
-    assert fila["hora_utc"] == "2026-09-30T14:00:00+00:00"
+    assert fila["hora_utc"] == (base + _minutes(30)).isoformat()
     assert fila["fuerza_pct"] == pytest.approx(1.4706, abs=0.01)
 
 
 def test_ib_ruptura_bajista():
-    fila = InitialBalanceService.evaluar("NASDAQ:X", _ib_barras(cierre_post=98.0))
+    base = _recent_ib_base()
+    fila = InitialBalanceService.evaluar("NASDAQ:X", _ib_barras(cierre_post=98.0, base=base))
     assert fila["ruptura"] == "BAJISTA"
-    assert fila["hora_utc"] == "2026-09-30T14:00:00+00:00"
+    assert fila["hora_utc"] == (base + _minutes(30)).isoformat()
 
 
 def test_ib_dentro_del_rango():
@@ -286,8 +332,9 @@ def test_ib_ventana_es_ny_aunque_app_tz_sea_lima(
     settings = _settings(clean_env, empty_env_file, config_file)
     assert settings.timezone == "America/Lima"
 
+    base = _recent_ib_base()
     svc = InitialBalanceService(
-        FakeBarRepo(_ib_barras("NASDAQ:X", cierre_post=103.5)),
+        FakeBarRepo(_ib_barras("NASDAQ:X", cierre_post=103.5, base=base)),
         FakeLatestTickRepo([]),
         settings,
     )
@@ -297,12 +344,13 @@ def test_ib_ventana_es_ny_aunque_app_tz_sea_lima(
     assert lote["NASDAQ:X"]["ib_high"] == 102.0
     assert lote["NASDAQ:X"]["ib_low"] == 99.0
     # El instante de ruptura se expone en UTC (la vista lo formatea).
-    assert lote["NASDAQ:X"]["hora_utc"] == "2026-09-30T14:00:00+00:00"
+    assert lote["NASDAQ:X"]["hora_utc"] == (base + _minutes(30)).isoformat()
 
 
 def test_ib_scan_prioriza_rupturas(clean_env, empty_env_file, config_file):
     settings = _settings(clean_env, empty_env_file, config_file)
-    barras = _ib_barras("NASDAQ:A", cierre_post=103.5) + _ib_barras("NASDAQ:B", cierre_post=101.0)
+    base = _recent_ib_base()
+    barras = _ib_barras("NASDAQ:A", cierre_post=103.5, base=base) + _ib_barras("NASDAQ:B", cierre_post=101.0, base=base)
     latest = [
         {"symbol": "NASDAQ:A", "asset_class": "equity"},
         {"symbol": "NASDAQ:B", "asset_class": "equity"},
@@ -318,10 +366,11 @@ def test_ib_scan_prioriza_rupturas(clean_env, empty_env_file, config_file):
 def test_ib_evaluar_lote_alineado_sin_truncar(clean_env, empty_env_file, config_file):
     """`evaluar_lote` conserva el orden de entrada y no reordena ni trunca."""
     settings = _settings(clean_env, empty_env_file, config_file)
+    base = _recent_ib_base()
     barras = (
-        _ib_barras("NASDAQ:A", cierre_post=101.0)
-        + _ib_barras("NASDAQ:B", cierre_post=103.5)
-        + _ib_barras("NASDAQ:C", cierre_post=98.0)
+        _ib_barras("NASDAQ:A", cierre_post=101.0, base=base)
+        + _ib_barras("NASDAQ:B", cierre_post=103.5, base=base)
+        + _ib_barras("NASDAQ:C", cierre_post=98.0, base=base)
     )
     svc = InitialBalanceService(FakeBarRepo(barras), FakeLatestTickRepo([]), settings)
 
@@ -408,6 +457,115 @@ def test_divergencia_alcista():
 def test_divergencia_sin_patron():
     closes = [10.0 + i * 0.2 for i in range(24)]
     assert DivergenciaService.detectar("NASDAQ:X", _bars_por_cierre(closes)) is None
+
+
+# ── Bollinger15mService: clasificación de bandas (en σ) ──────────────────────
+def test_bollinger_rechazo_high_sobre_banda():
+    r = Bollinger15mService.clasificar_banda(105.0, 100.0, 90.0, 2.5, tol_sigma=0.5)
+    assert r[0] == "RECHAZO HIGH"
+    assert r[1] == "CORTO"
+    assert r[2] == "sobre banda superior"
+    assert r[3] == pytest.approx(5.0)
+    assert r[4] is True  # superó la banda → accionable
+
+
+def test_bollinger_rebote_low_bajo_banda():
+    r = Bollinger15mService.clasificar_banda(89.0, 100.0, 90.0, 2.5, tol_sigma=0.5)
+    assert r[0] == "REBOTE LOW"
+    assert r[1] == "LARGO"
+    assert r[2] == "bajo banda inferior"
+    assert r[4] is True
+
+
+def test_bollinger_cerca_banda_superior():
+    r = Bollinger15mService.clasificar_banda(99.7, 100.0, 90.0, 2.5, tol_sigma=0.5)
+    assert r[0] == "RECHAZO HIGH"
+    assert r[2] == "cerca banda superior"
+    assert r[4] is False  # cerca, no superó → watchlist
+
+
+def test_bollinger_sin_toque():
+    assert Bollinger15mService.clasificar_banda(95.0, 100.0, 90.0, 2.5, tol_sigma=0.5) is None
+
+
+def test_bollinger_bandas_none():
+    assert Bollinger15mService.clasificar_banda(95.0, None, 90.0, 2.5) is None
+    assert Bollinger15mService.clasificar_banda(95.0, 100.0, 90.0, None) is None
+
+
+def test_bollinger_lejos_en_sigma_se_excluye():
+    """Caso V/BA: por precio podría estar <0.5% de la banda, pero en σ está lejos."""
+    # close=98, upper=100, σ=1 → a 2σ de la banda → fuera (no es extremo).
+    assert Bollinger15mService.clasificar_banda(98.0, 100.0, 90.0, 1.0, tol_sigma=0.5) is None
+
+
+# ── Tendencia15mService (K2) ─────────────────────────────────────────────────
+class _FakeBollinger:
+    """Falso del Bollinger15mService para el test de Tendencia15mService."""
+
+    def __init__(self, filas):
+        self._filas = filas
+
+    def scan(self, limit=None):
+        return self._filas[: limit if limit else None]
+
+
+def test_tendencia_scan_universo_k1_filtrado_por_adx(
+    clean_env, empty_env_file, config_file
+):
+    settings = _settings(clean_env, empty_env_file, config_file)
+
+    # Universo K1: tres extremos de banda (mismos símbolos).
+    bol = _FakeBollinger(
+        [
+            {"symbol": "NASDAQ:A", "ticker": "A", "z_banda": 2.5, "lado": "CORTO",
+             "tipo": "RECHAZO HIGH", "close": 100, "score": None},
+            {"symbol": "NYSE:B", "ticker": "B", "z_banda": -2.0, "lado": "LARGO",
+             "tipo": "REBOTE LOW", "close": 50, "score": None},
+            {"symbol": "NASDAQ:C", "ticker": "C", "z_banda": 1.5, "lado": "CORTO",
+             "tipo": "RECHAZO HIGH", "close": 20, "score": None},
+        ]
+    )
+    rows = [
+        {"symbol": "NASDAQ:A", "asset_class": "equity", "adx_15": 40.0},
+        {"symbol": "NYSE:B", "asset_class": "equity", "adx_15": 20.0},   # < 25 → excluido
+        {"symbol": "NASDAQ:C", "asset_class": "equity", "adx_15": 30.0},
+    ]
+    svc = Tendencia15mService(bol, FakeLatestTickRepo(rows), settings)
+    filas = svc.scan()
+
+    # Mismos símbolos que K1, menos B (ADX < 25). Orden por ADX desc.
+    assert [f["ticker"] for f in filas] == ["A", "C"]
+    assert filas[0]["adx_15"] == 40.0
+    assert filas[1]["adx_15"] == 30.0
+
+
+# ── Divergencia5mService (K3) y ensamblaje 5m ────────────────────────────────
+def test_ensamblar_ticks_5m_agrupa():
+    t0 = datetime(2026, 9, 30, 14, 0, 0, tzinfo=UTC)
+    t1 = datetime(2026, 9, 30, 14, 3, 0, tzinfo=UTC)
+    t2 = datetime(2026, 9, 30, 14, 6, 0, tzinfo=UTC)
+    ticks = [
+        {"timestamp_utc": t0, "close": 10.0, "volume": 1.0},
+        {"timestamp_utc": t1, "close": 11.0, "volume": 2.0},
+        {"timestamp_utc": t2, "close": 12.0, "volume": 3.0},
+    ]
+    barras = Bar15mService.ensamblar_ticks_5m(ticks)
+
+    # 14:00–14:04 y 14:05–14:09
+    assert len(barras) == 2
+    assert barras[0]["open"] == 10.0
+    assert barras[0]["close"] == 11.0
+    assert barras[0]["high"] == 11.0
+    assert barras[0]["low"] == 10.0
+    assert barras[1]["close"] == 12.0
+
+
+def test_divergencia_5m_scan_sin_ticks(clean_env, empty_env_file, config_file):
+    settings = _settings(clean_env, empty_env_file, config_file)
+    latest = FakeLatestTickRepo([{"symbol": "NASDAQ:X", "asset_class": "equity"}])
+    svc = Divergencia5mService(FakeBarRepo(ticks=[]), latest, settings)
+    assert svc.scan() == []
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────

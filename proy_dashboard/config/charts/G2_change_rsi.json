@@ -1,0 +1,29 @@
+{
+  "meta": {
+    "change_rsi": {
+      "codigo": "G2",
+      "titulo": "Momentum Confirmado — Change vs RSI",
+      "tf": "1D",
+      "ayuda": [
+        "Mapa de cuadrantes — Change % vs RSI (1D)",
+        "",
+        "                 Change %",
+        "      pierde ◄─────────────────► gana",
+        "            (0, izquierda)   (derecha)",
+        " RSI 85 ┌───────────┬───────────┐",
+        "    ▲   │  B1 TECHO │ A1 EUFORIA│  RSI > 70",
+        "    │   │  cae+RSI↑ │ sube+RSI↑ │  (sobrecompra)",
+        " RSI 70 ├───────────┼───────────┤",
+        "    │   │  B  VENTA │  A COMPRA │  30 < RSI < 70",
+        "    │   │  cae sano │  sube sano│  (zona sana)",
+        " RSI 30 ├───────────┼───────────┤",
+        "    ▼   │  B2 SOBRE-│ A2 REBOTE │  RSI < 30",
+        " RSI 15 │  VENDIDO  │ (sorpresa)│  (sobreventa)",
+        "        └───────────┴───────────┘",
+        "",
+        " A  momentum ALCISTA confirmado · B  momentum BAJISTA confirmado",
+        " A1/B1 confirmado pero EXTENDIDO · A2/B2 contradicción (revisar)"
+      ]
+    }
+  }
+}

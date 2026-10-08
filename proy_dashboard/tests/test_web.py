@@ -9,7 +9,7 @@ from web.app import app
 PARTIALS = [
     "header", "sectors", "sector_risk", "momentum", "change_rsi",
     "alcistas", "bajistas", "riesgo_gauges",
-    "riesgo_fx", "volume", "range52w", "rsi_limites", "precios",
+    "riesgo_fx", "rsi_limites", "precios",
     "score_history", "multiframe", "calendar", "health", "tabla_sector",
 ]
 
@@ -74,7 +74,7 @@ def test_partials_responsivos():
 
 def test_partials_de_grafico_renderizan_echarts():
     graficos = ["header", "sectors", "momentum", "change_rsi",
-                "volume", "range52w", "rsi_limites", "precios",
+                "rsi_limites", "precios",
                 "score_history", "multiframe"]
     with _client() as client:
         for nombre in graficos:

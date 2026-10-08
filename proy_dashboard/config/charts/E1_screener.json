@@ -1,0 +1,10 @@
+{
+  "meta": { "screener_15m": { "codigo": "E1", "titulo": "Screener 15 min" } },
+  "trading_15m": {
+    "screener_horas": 48,
+    "rsi_sobrecompra": 70,
+    "rsi_sobreventa": 30,
+    "adx_min": 20,
+    "vol_ratio_min": 1.0
+  }
+}

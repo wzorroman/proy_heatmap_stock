@@ -1,0 +1,6 @@
+{
+  "meta": { "confluencia_fuerte": { "codigo": "J3", "titulo": "Confluencia Fuerte 5m/15m/1D + Volumen" } },
+  "confluencia_fuerte": {
+    "max": 10
+  }
+}

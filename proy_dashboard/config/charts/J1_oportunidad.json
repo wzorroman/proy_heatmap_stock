@@ -1,0 +1,11 @@
+{
+  "meta": { "oportunidad_15m": { "codigo": "J1", "titulo": "Oportunidades Momentum 15m" } },
+  "trading_15m": {
+    "oportunidad_horas": 48,
+    "oportunidad_max": 4,
+    "oportunidad_rsi_min": 50,
+    "oportunidad_rsi_max": 70,
+    "oportunidad_adx_min": 25,
+    "oportunidad_vol_min": 1.2
+  }
+}

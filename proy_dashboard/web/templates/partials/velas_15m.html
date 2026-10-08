@@ -1,5 +1,5 @@
 <article class="card card-trading" data-symbol="{{ symbol }}">
-  <h2>Velas 15m <span class="velas-symbol-badge">{{ symbol }}</span></h2>
+  <h2>{% if chart_code('velas_15m') %}<span class="chart-code">{{ chart_code('velas_15m') }}</span>{% endif %}Velas 15m <span class="velas-symbol-badge">{{ symbol }}</span></h2>
   {% if sin_datos %}
     <p class="muted">Sin datos 15m suficientes para {{ symbol }}.</p>
   {% else %}

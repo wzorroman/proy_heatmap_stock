@@ -1,0 +1,36 @@
+{
+  "meta": {
+    "rsi_limites": {
+      "codigo": "H1",
+      "titulo": "RSI · acciones top por capitalización",
+      "tf": "1D",
+      "ayuda": [
+        "Mapa general — RSI 1D (acciones top por capitalización)",
+        "Eje Y = RSI · tamaño del punto = capitalización",
+        "",
+        "  100 ┤",
+        "   70 ┤══════════════════  sobrecompra      (rojo relleno) · posible techo",
+        "   60 ┤──────────────────  oportunidad alta (rojo hueco)   · vigilar",
+        "   50 ┤",
+        "   40 ┤──────────────────  oportunidad baja (verde hueco)  · vigilar",
+        "   30 ┤══════════════════  sobreventa       (verde relleno) · posible rebote",
+        "    0 ┤",
+        "      └──────────────────► acciones",
+        "",
+        "   relleno = extremo (≥70 / ≤30) · hueco = oportunidad (60–70 / 30–40)",
+        "   punto más grande = mayor capitalización (más peso en el mercado)",
+        "   bloques del eje X: ALTA (≥60) a la izquierda | BAJA (≤40) a la derecha"
+      ]
+    }
+  },
+  "rsi": {
+    "oportunidad_alto": 60,
+    "oportunidad_bajo": 40,
+    "limite_alto": 70,
+    "limite_bajo": 30,
+    "scatter_max": 100
+  },
+  "panels": {
+    "rsi_scatter_n": 25
+  }
+}

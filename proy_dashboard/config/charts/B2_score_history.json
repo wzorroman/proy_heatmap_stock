@@ -1,0 +1,7 @@
+{
+  "meta": { "score_history": { "codigo": "B2", "titulo": "Evolución del score de mercado" } },
+  "panels": {
+    "history_hours_default": 8,
+    "score_max_age_min": 20
+  }
+}

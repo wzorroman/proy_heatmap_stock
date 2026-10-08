@@ -112,6 +112,10 @@ body {
 .cell.fill > .card { flex: 1 1 auto; display: flex; flex-direction: column; }
 .cell.fill > .card .chart { flex: 1 1 auto; min-height: 560px; }
 
+/* Cards en la misma fila del grid: misma altura (la más alta de la fila) */
+.cell { display: flex; flex-direction: column; }
+.cell > .card { flex: 1 1 auto; min-height: 0; }
+
 /* Fila 1: todas las tarjetas con la misma altura (la más alta, "Distribución score") */
 .fila1 { display: flex; }
 .fila1 > .card { flex: 1 1 auto; }
@@ -124,9 +128,16 @@ body {
   .cell, .cell.wide, .cell.calendar,
   .cell.uno, .cell.dos, .cell.tres, .cell.cuarto, .cell.cinco, .cell.seis, .cell.siete { grid-column: span 12; }
 }
+/* Inicio de fila explícito: evita que las filas J/K se mezclen cuando una card
+   (p. ej. H2) queda sola y deja columnas libres antes. */
+@media (min-width: 901px) {
+  .cell.cuarto.row-start { grid-column: 1 / span 4; }
+}
 
 .card {
   --panel-accent: linear-gradient(90deg, var(--azul), var(--verde), var(--rojo));
+  /* Borde superior: siempre colorido (independiente del accent del título). */
+  --card-top: linear-gradient(90deg, var(--azul), var(--verde), var(--rojo));
   position: relative;
   background: linear-gradient(180deg, var(--panel), var(--panel-alt));
   border: 1px solid var(--border);
@@ -141,7 +152,7 @@ body {
   position: absolute;
   inset: 0 0 auto 0;
   height: 3px;
-  background: var(--panel-accent);
+  background: var(--card-top);
   opacity: 0.9;
 }
 .card:hover { border-color: #3a4756; transform: translateY(-1px); }
@@ -153,6 +164,133 @@ body {
   color: var(--text);
 }
 .card h2.tinted { color: var(--panel-accent); }
+
+/* Código identificador del gráfico (A1, A2, …) junto al título */
+.chart-code {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 1px 7px;
+  border-radius: 5px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  font-variant-numeric: tabular-nums;
+  color: var(--azul);
+  background: var(--azul-soft);
+  border: 1px solid var(--azul);
+  vertical-align: middle;
+}
+
+/* Ayuda contextual "(+)" junto al título (popup sobrepuesto, sin alterar tamaño) */
+.chart-help {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 5px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  font-size: 0.7rem;
+  font-weight: 800;
+  cursor: help;
+  vertical-align: middle;
+  user-select: none;
+}
+.chart-help:hover, .chart-help:focus { color: var(--azul); border-color: var(--azul); outline: none; }
+.chart-help-pop {
+  display: none;
+  position: absolute;
+  top: 42px;
+  left: 16px;
+  z-index: 60;
+  max-width: calc(100% - 32px);
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(16, 21, 28, 0.98);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+  overflow-x: auto;
+}
+.chart-help-pop pre {
+  margin: 0;
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.68rem;
+  line-height: 1.3;
+  font-weight: 400;
+  white-space: pre;
+}
+.chart-help:hover + .chart-help-pop,
+.chart-help:focus + .chart-help-pop,
+.chart-help-pop:hover { display: block; }
+
+/* Leyenda estructurada de gráficos (swatches + nota) */
+.leyenda {
+  display: flex; flex-wrap: wrap; gap: 5px 18px;
+  margin: 0 0 10px; font-size: 0.72rem; color: var(--muted);
+}
+.leyenda-item { display: inline-flex; align-items: center; gap: 6px; }
+.leyenda-item b { color: var(--text); }
+.leyenda-swatch { flex-shrink: 0; }
+.leyenda-swatch.punto {
+  width: 12px; height: 12px; border-radius: 50%;
+  background: var(--c); border: 1px solid rgba(11, 15, 20, 0.9);
+}
+.leyenda-swatch.linea { width: 18px; height: 0; border-top: 2px dashed var(--c); }
+.leyenda-swatch.linea-solida { width: 18px; height: 0; border-top: 2px solid var(--c); }
+.leyenda-swatch.tamano {
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 2px solid var(--c); background: transparent;
+}
+.leyenda-swatch.hueco {
+  width: 12px; height: 12px; border-radius: 50%;
+  border: 2px solid var(--c); background: transparent;
+}
+.leyenda-nota {
+  margin: 8px 0 0; padding-top: 7px; border-top: 1px solid var(--border);
+  font-size: 0.72rem; color: var(--muted); line-height: 1.45;
+}
+.leyenda-nota b { color: var(--text); }
+
+/* Tooltip HTML del dot-plot Bollinger */
+.tt { width: 268px; font-size: 0.76rem; }
+.tt-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.tt-logo {
+  width: 30px; height: 30px; border-radius: 6px; object-fit: contain;
+  background: rgba(255, 255, 255, 0.06); border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.tt-id { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.tt-sym {
+  font-size: 1.05rem; font-weight: 800; letter-spacing: 0.3px;
+  color: var(--text); line-height: 1.1;
+}
+.tt-tipo {
+  align-self: flex-start; padding: 2px 9px; border-radius: 6px;
+  font-size: 0.64rem; font-weight: 800; letter-spacing: 0.5px;
+  text-transform: uppercase; white-space: nowrap;
+  border: 1px solid transparent;
+}
+.tt-tipo.tt-neg { color: var(--rojo); background: var(--rojo-soft); border-color: var(--rojo); }
+.tt-tipo.tt-pos { color: var(--verde); background: var(--verde-soft); border-color: var(--verde); }
+.tt-tipo.tt-neu { color: var(--amarillo); background: var(--amarillo-soft); border-color: var(--amarillo); }
+.tt-grid {
+  display: flex; flex-direction: column; gap: 4px;
+  padding-top: 8px; border-top: 1px solid var(--border);
+}
+.tt-row { display: flex; justify-content: space-between; align-items: baseline; gap: 20px; }
+.tt-row span { color: var(--muted); }
+.tt-row b { font-variant-numeric: tabular-nums; color: var(--text); }
+.tt-score {
+  margin-top: 3px; padding-top: 5px;
+  border-top: 1px dashed var(--border);
+}
+.tt-score span { color: var(--amarillo); font-weight: 700; }
+.tt-score b { color: var(--amarillo); font-weight: 800; }
+.tt-nota {
+  margin-top: 7px; padding-top: 6px; border-top: 1px solid var(--border);
+  color: var(--muted); font-size: 0.68rem;
+}
 .card .nota { margin: -4px 0 10px; color: var(--muted); font-size: 0.78rem; }
 .card .nota b { font-weight: 800; }
 
@@ -242,6 +380,161 @@ body {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
+
+/* Tarjetas de oportunidad (paneles 5-15m) — diseño vertical con tags uniformes */
+.op-list { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+.op-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.op-item:hover { background: rgba(63, 185, 80, 0.10); border-color: var(--verde); }
+.op-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.op-head .sym { font-weight: 800; }
+.op-head-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.op-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+}
+.op-tag {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  font-size: 0.72rem;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.op-tag b {
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.op-tag .pct { font-size: 0.72rem; }
+.op-tag-close {
+  border-color: var(--azul);
+  background: var(--azul-soft);
+}
+.op-tag-close b { color: var(--azul); }
+
+/* Confluencia Fuerte (J3) — semáforo alineado 5m/15m/1D + tags + tooltip */
+.cf-card { overflow: visible; }
+.cf-table { display: flex; flex-direction: column; gap: 3px; margin-top: 6px; }
+
+/* Columnas compartidas por cabecera y filas: símbolo | 5m | 15m | 1D | Score | Vol | Señal.
+   Mismo padding + borde transparente en ambas → alineación exacta tipo E3. */
+.cf-head, .cf-item {
+  display: grid;
+  grid-template-columns: 96px 26px 26px 26px 50px 88px 54px;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  box-sizing: border-box;
+}
+.cf-head { padding-bottom: 4px; }
+.cf-h {
+  font-size: 0.56rem; text-transform: uppercase; letter-spacing: 0.4px;
+  color: var(--muted); text-align: center;
+}
+.cf-h.cf-h-right { text-align: right; letter-spacing: 0.3px; }
+
+.cf-item {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  cursor: pointer; transition: background 0.15s ease, border-color 0.15s ease;
+}
+.cf-item { border-color: var(--border); }
+.cf-item:hover { background: rgba(88, 166, 255, 0.10); border-color: var(--accent); }
+
+.cf-sym { position: relative; display: inline-flex; align-items: center; gap: 6px; font-weight: 800; min-width: 0; }
+.cf-sym-txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.cf-dot {
+  width: 12px; height: 12px; border-radius: 50%; justify-self: center;
+  border: 1px solid #0b0f14;
+}
+.cf-dot.cf-alc { background: var(--verde); }
+.cf-dot.cf-baj { background: var(--rojo); }
+.cf-dot.cf-neu { background: var(--muted); }
+
+.cf-score { text-align: center; font-weight: 800; font-size: 0.72rem; font-variant-numeric: tabular-nums; }
+.cf-score.cf-score-pos { color: var(--verde); }
+.cf-score.cf-score-neg { color: var(--rojo); }
+.cf-signal { text-align: center; }
+
+.cf-lg {
+  display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+  vertical-align: middle; border: 1px solid #0b0f14;
+}
+.cf-lg.cf-alc { background: var(--verde); }
+.cf-lg.cf-baj { background: var(--rojo); }
+.cf-tip {
+  position: absolute; left: 0; top: calc(100% + 6px); z-index: 30;
+  display: none; flex-direction: column; gap: 3px;
+  min-width: 212px; padding: 9px 11px; border-radius: 8px;
+  background: rgba(20, 26, 34, 0.98); border: 1px solid var(--border);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+  font-size: 0.72rem; color: var(--text); font-weight: 500;
+}
+.cf-tip > b { margin-bottom: 4px; font-weight: 800; }
+.cf-tip-row { display: flex; justify-content: space-between; gap: 16px; color: var(--muted); }
+.cf-tip-row b { color: var(--text); font-variant-numeric: tabular-nums; }
+.cf-sym:hover .cf-tip { display: flex; }
+
+/* Estrella de confluencia (fila J: símbolo presente en ≥2 paneles J1/J2/J3) */
+.conf-star {
+  color: var(--amarillo);
+  font-size: 0.72rem;
+  margin-left: 3px;
+  text-shadow: 0 0 6px rgba(214, 167, 44, 0.6);
+}
+
+/* Mini barra de volumen (J3) — uniforme celeste, escala 1.0x→0% · 3.5x→100% */
+.cf-vbar { display: inline-flex; align-items: center; gap: 5px; }
+.cf-vbar-track {
+  width: 58px; height: 10px; border-radius: 5px;
+  background: rgba(255, 255, 255, 0.08); border: 1px solid var(--border);
+  overflow: hidden;
+}
+.cf-vbar-fill { display: block; height: 100%; border-radius: 5px; background: var(--azul); }
+.cf-vbar-val { display: inline-block; line-height: 1; font-size: 0.68rem; color: var(--muted); font-variant-numeric: tabular-nums; vertical-align: middle; }
+
+/* Placeholders de próximos paneles en la fila de oportunidades */
+.placeholder-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  min-height: 160px;
+  opacity: 0.7;
+}
+.placeholder-panel h2 { font-size: 0.9rem; }
+.placeholder-panel p { margin-top: 8px; font-size: 0.75rem; }
 /* Interpretación debajo del gráfico de histograma */
 .score-interp {
   margin: 8px 0 0;

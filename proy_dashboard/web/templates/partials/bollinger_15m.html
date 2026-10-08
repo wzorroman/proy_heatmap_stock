@@ -1,0 +1,34 @@
+<article class="card card-trading">
+  <h2>{% if chart_code('bollinger_15m') %}<span class="chart-code">{{ chart_code('bollinger_15m') }}</span>{% endif %}Reversión Bollinger <span class="ib-time">15m</span></h2>
+  <p class="nota">{{ filas|length }} activos cerca de banda · Bollinger 20/2 · vol ≥1x</p>
+  <div class="op-list">
+    {% for d in filas %}
+    <div class="op-item" data-symbol="{{ d.symbol }}"
+         hx-get="/partials/velas_15m?symbol={{ d.symbol|urlencode }}"
+         hx-target="#trading-velas-card"
+         hx-swap="innerHTML">
+      <div class="op-head">
+        <span class="sym">
+          {% if d.logo %}
+          <img class="slogo" src="{{ d.logo }}" alt="" loading="lazy">
+          {% else %}
+          <span class="slogo slogo-empty" aria-hidden="true"></span>
+          {% endif %}
+          {{ d.ticker }}
+        </span>
+        <div class="op-head-right">
+          <span class="op-tag op-tag-close"><b>Close</b> {{ "%.2f"|format(d.close) }}</span>
+          <span class="zona zona-sm zona-{{ 'COMPRAR' if d.lado == 'LARGO' else 'VENDER' }}">{{ d.lado }}</span>
+        </div>
+      </div>
+      <div class="op-tags">
+        <span class="op-tag"><b>Tipo</b> {{ d.tipo }}</span>
+        <span class="op-tag"><b>Banda</b> {{ "%+.2f"|format(d.dist_banda) }}%</span>
+        <span class="op-tag"><b>Vol</b> {{ "%.2f"|format(d.vol_ratio) }}x</span>
+        <span class="op-tag"><b>RSI</b> {{ "%.1f"|format(d.rsi_15) if d.rsi_15 is not none else "—" }}</span>
+      </div>
+    </div>
+    {% endfor %}
+    {% if not filas %}<p class="muted">Sin pinchazos de banda con volumen en este momento.</p>{% endif %}
+  </div>
+</article>

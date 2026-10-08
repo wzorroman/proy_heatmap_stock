@@ -1,0 +1,10 @@
+{
+  "trading_15m": {
+    "bollinger_horas": 48,
+    "bollinger_max": 5,
+    "bollinger_ventana": 20,
+    "bollinger_k": 2.0,
+    "bollinger_tol_sigma": 0.5,
+    "bollinger_vol_min": 1.0
+  }
+}

@@ -1,12 +1,14 @@
 """Fixtures comunes de los tests (aislamiento de entorno y rutas)."""
 
 import json
+import shutil
 from pathlib import Path
 
 import pytest
 
 PROJECT_PATH = Path(__file__).resolve().parent.parent
 REAL_CONFIG = PROJECT_PATH / "config_dashboard.json"
+REAL_CHARTS_DIR = PROJECT_PATH / "config" / "charts"
 
 ENV_KEYS = [
     "APP_VERSION",
@@ -44,10 +46,12 @@ def empty_env_file(tmp_path):
 
 @pytest.fixture
 def config_file(tmp_path):
-    """Copia de config_dashboard.json en tmp (aislada)."""
+    """Copia aislada de config_dashboard.json + config/charts/ en tmp."""
     data = json.loads(REAL_CONFIG.read_text(encoding="utf-8"))
     path = tmp_path / "config_dashboard.json"
     path.write_text(json.dumps(data), encoding="utf-8")
+    if REAL_CHARTS_DIR.is_dir():
+        shutil.copytree(REAL_CHARTS_DIR, tmp_path / "config" / "charts")
     return path
 
 

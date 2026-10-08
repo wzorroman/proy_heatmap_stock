@@ -37,6 +37,12 @@ def _floor_15m(ts: datetime) -> datetime:
     return ts.replace(minute=(ts.minute // 15) * 15, second=0, microsecond=0)
 
 
+def _floor_5m(ts: datetime) -> datetime:
+    """Redondea hacia abajo a múltiplo de 5 minutos."""
+    ts = ts.astimezone(timezone.utc)
+    return ts.replace(minute=(ts.minute // 5) * 5, second=0, microsecond=0)
+
+
 def _sma(valores: list[Optional[float]], ventana: int) -> list[Optional[float]]:
     salida: list[Optional[float]] = []
     for i in range(len(valores)):
@@ -321,6 +327,38 @@ class Bar15mService:
 
     @staticmethod
     def ensamblar_ticks(ticks: list[dict]) -> list[dict]:
-        """Wrapper estático para testear el ensamblaje."""
+        """Wrapper estático para testear el ensamblaje (15m)."""
         svc = Bar15mService.__new__(Bar15mService)
         return svc._ensamblar_desde_ticks(ticks)
+
+    @staticmethod
+    def ensamblar_ticks_5m(ticks: list[dict]) -> list[dict]:
+        """Agrupa ticks en buckets de 5 min formando OHLCV."""
+        buckets: dict[datetime, list[dict]] = defaultdict(list)
+        for t in ticks:
+            ts = t.get("timestamp_utc")
+            if ts is None:
+                continue
+            buckets[_floor_5m(ts)].append(t)
+
+        barras = []
+        for inicio in sorted(buckets):
+            vals = buckets[inicio]
+            closes = [_f(v.get("close")) for v in vals]
+            vols = [_f(v.get("volume")) for v in vals]
+            closes = [c for c in closes if c is not None]
+            vols = [v for v in vols if v is not None]
+            if not closes:
+                continue
+            barras.append(
+                {
+                    "timestamp_utc": inicio,
+                    "open": vals[0]["close"],
+                    "high": max(closes),
+                    "low": min(closes),
+                    "close": vals[-1]["close"],
+                    "volume": sum(vols) if vols else None,
+                    "n_ticks": len(vals),
+                }
+            )
+        return barras

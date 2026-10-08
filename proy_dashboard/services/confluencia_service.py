@@ -23,11 +23,18 @@ class ConfluenciaService:
         self.latest_tick_repo = latest_tick_repo
         self.settings = settings
 
-    def scan(self, symbols: list[str] | None = None) -> list[dict]:
+    def scan(
+        self,
+        symbols: list[str] | None = None,
+        vol_map: dict | None = None,
+    ) -> list[dict]:
         """Devuelve lista de acciones con su alineación 5m/15m/1D.
 
         Si `symbols` viene informado, respeta esa lista y su orden (útil para
         alinear la confluencia con el screener); si no, usa todo el universo.
+
+        `vol_map` (opcional) = {symbol: vol_ratio} para añadir la confirmación de
+        volumen (`ALTA CONVICCIÓN` vs `VIGILAR`).
         """
         stocks = list(symbols) if symbols else self._stocks()
         if not stocks:
@@ -42,6 +49,7 @@ class ConfluenciaService:
         latest_rows = self.latest_tick_repo.fetch_all(asset_classes=["equity"])
         latest_map = {r["symbol"]: r for r in latest_rows if r.get("symbol")}
 
+        vol_map = vol_map or {}
         resultados = []
         for symbol in stocks:
             latest = latest_map.get(symbol)
@@ -49,7 +57,7 @@ class ConfluenciaService:
                 continue
             tf5 = tf5_map.get(symbol)
             tf15 = tf15_map.get(symbol)
-            fila = self._analizar(symbol, tf5, tf15, latest)
+            fila = self._analizar(symbol, tf5, tf15, latest, vol_map.get(symbol))
             if fila:
                 resultados.append(fila)
 
@@ -71,7 +79,14 @@ class ConfluenciaService:
                 salida[sym] = r
         return salida
 
-    def _analizar(self, symbol: str, tf5: Optional[dict], tf15: Optional[dict], daily: dict) -> dict:
+    def _analizar(
+        self,
+        symbol: str,
+        tf5: Optional[dict],
+        tf15: Optional[dict],
+        daily: dict,
+        vol: Optional[float] = None,
+    ) -> dict:
         s5 = self._estado_tf(tf5)
         s15 = self._estado_tf(tf15)
         s1d = self._estado_daily(daily)
@@ -85,6 +100,16 @@ class ConfluenciaService:
         else:
             label, color = "NEUTRAL", "amarillo"
 
+        # Confirmación por volumen (panel 2.3 "Confluencia + Vol").
+        vol_ratio = _f(vol) if vol is not None else None
+        setup = None
+        if label in ("COMPRAR", "VENDER"):
+            direccion = "ALCISTA" if label == "COMPRAR" else "BAJISTA"
+            if vol_ratio is not None and vol_ratio >= 1.0:
+                setup = f"ALTA CONVICCIÓN {direccion}"
+            else:
+                setup = "VIGILAR"
+
         return {
             "symbol": symbol,
             "rsi_5m": s5["rsi"],
@@ -96,6 +121,8 @@ class ConfluenciaService:
             "score": score,
             "signal": label,
             "color": color,
+            "vol_ratio": vol_ratio,
+            "setup": setup,
         }
 
     def _estado_tf(self, row: Optional[dict]) -> dict:

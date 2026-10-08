@@ -1,5 +1,5 @@
 <article class="card card-trading">
-  <h2>Divergencia precio / RSI <span class="ib-time">15m</span></h2>
+  <h2>{% if chart_code('divergencia') %}<span class="chart-code">{{ chart_code('divergencia') }}</span>{% endif %}Divergencia precio / RSI <span class="ib-time">15m</span></h2>
   <p class="nota">{{ filas|length }} alertas de {{ total }} acciones · precio vs RSI</p>
   <div class="div-list">
     {% for d in filas %}

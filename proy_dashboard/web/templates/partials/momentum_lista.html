@@ -1,5 +1,5 @@
 <article class="card" style="--panel-accent: {{ 'var(--verde)' if color == 'verde' else 'var(--rojo)' }};">
-  <h2 class="tinted">{{ titulo }} ({{ items|length }})</h2>
+  <h2 class="tinted">{% if codigo %}<span class="chart-code">{{ codigo }}</span>{% endif %}{{ titulo }} ({{ items|length }})</h2>
   <div class="lista">
     {% for it in items %}
     {# DISEÑO NUEVO: símbolo a la izquierda · barra + valor a la derecha #}

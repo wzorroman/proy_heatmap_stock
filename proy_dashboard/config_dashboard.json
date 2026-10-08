@@ -1,4 +1,5 @@
 {
+  "_nota": "Config global de la aplicación (app + data). La configuración por gráfico vive en config/charts/*.json, un archivo por gráfico (A1, A2, ...).",
   "app": {
     "title": "Radar Intermarket — Prototipo BD",
     "htmx_refresh_ms": 180000,
@@ -8,99 +9,5 @@
     "min_history_days": 2,
     "backfill_bucket_min": 30,
     "placeholder_msg": "Histórico insuficiente (<2 días). Se habilitará al acumular la serie."
-  },
-  "panels": {
-    "top_n": 15,
-    "treemap_max": 1000,
-    "sector_min_assets": 5,
-    "history_hours_default": 24,
-    "score_max_age_min": 20,
-    "heatmap_windows": 12,
-    "rsi_scatter_n": 25,
-    "sector_signal_scale": 15
-  },
-  "score": {
-    "weights": { "rsi": 20, "adx": 15, "cci20": 15, "bbpower": 15, "volume": 15, "change": 20 },
-    "normalization": {
-      "rsi": { "min": 0, "max": 100 },
-      "adx": { "min": 0, "max": 50 },
-      "cci20": { "min": -200, "max": 200 },
-      "bbpower": { "min": -50, "max": 50 },
-      "volume_ratio": { "min": 0, "max": 2 },
-      "change_pct": { "min": -5, "max": 5 }
-    },
-    "clamp": { "min": 0, "max": 10 },
-    "zones": { "comprar": 6.5, "vender": 4.5 },
-    "momentum": { "asset_classes": ["equity", "etf"], "weight_mode": "equal" },
-    "score_15min": { "tf": "15", "last_n": 5 },
-    "radar": {
-      "components": [
-        { "logical_key": "VIX", "weight": 30, "direction": "inverse" },
-        { "logical_key": "US10Y", "weight": 25, "direction": "inverse" },
-        { "logical_key": "DXY", "weight": 25, "direction": "inverse" },
-        { "logical_key": "TLT", "weight": 20, "direction": "direct" }
-      ],
-      "normalization": "rsi",
-      "note": "direct: mayor valor => más alcista. inverse: mayor valor => más bajista."
-    }
-  },
-  "events": {
-    "importance_min": 0,
-    "today_country": "ALL",
-    "today_importance_level": 1,
-    "default_country": "ALL",
-    "lookback_hours": 24,
-    "lookahead_hours": 72
-  },
-  "universe": {
-    "stocks": ["equity", "common"]
-  },
-  "rsi": {
-    "oportunidad_alto": 60,
-    "oportunidad_bajo": 40,
-    "limite_alto": 70,
-    "limite_bajo": 30,
-    "scatter_max": 100
-  },
-  "precio": {
-    "horas": 48,
-    "escala": {
-      "adx_max": 50,
-      "rsi_zonas": [30, 70],
-      "cruce_max_pct": 0.5,
-      "marcar_precio_en_sma": true,
-      "rango_ventana": true
-    },
-    "tarjetas": [
-      { "clave": "qqq", "titulo": "QQQ", "subtitulo": "(NASDAQ-100)", "icono": "📈", "symbol": "NASDAQ:QQQ" },
-      { "clave": "spy", "titulo": "SPY", "subtitulo": "(S&P 500)", "icono": "📈", "symbol": "AMEX:SPY" },
-      { "clave": "iwm", "titulo": "IWM", "subtitulo": "(Russell 2000)", "icono": "🏭", "symbol": "AMEX:IWM" },
-      { "clave": "oro", "titulo": "ORO", "subtitulo": "(XAUUSD)", "icono": "🥇", "icono_url": "/static/iconos_mercado/oro_lingote.svg", "symbol": "OANDA:XAUUSD" }
-    ]
-  },
-  "tabla_sector": {
-    "default": "Technology Services",
-    "limite": 60
-  },
-  "sectores": {
-    "timeframe": "1D"
-  },
-  "trading_15m": {
-    "default_symbol": "NASDAQ:NVDA",
-    "horas": 48,
-    "screener_horas": 48,
-    "stale_min": 60,
-    "rsi_sobrecompra": 70,
-    "rsi_sobreventa": 30,
-    "adx_min": 20,
-    "vol_ratio_min": 1.0,
-    "ib_minutos": 30,
-    "ib_horas": 48,
-    "ib_max_acciones": 15,
-    "ib_mercado_simbolos": ["AMEX:SPY", "NASDAQ:QQQ", "AMEX:IWM"],
-    "div_horas": 48,
-    "div_pivote_k": 2,
-    "div_rsi_min": 1.5,
-    "div_max": 15
   }
 }

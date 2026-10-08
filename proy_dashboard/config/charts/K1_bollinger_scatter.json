@@ -1,0 +1,32 @@
+{
+  "meta": {
+    "bollinger_scatter": {
+      "codigo": "K1",
+      "titulo": "Reversión Bollinger 15m — dot-plot (σ)",
+      "ayuda": [
+        "Mapa general — Reversión Bollinger 15m (dot-plot σ)",
+        "Eje Y = posición en la banda (σ) · 1 punto = 1 acción · orden por σ",
+        "",
+        "   +3σ ┤  ●TXN  ●TER              ← CORTO (rojo) = rechazo banda superior",
+        "   +2σ ┤════════════════════════  banda superior (±2σ)",
+        "   +1σ ┤      ●NFLX ●MS",
+        "    0  ┤────────────────────────  SMA20 (media)",
+        "   −1σ ┤              ●V ●MCD",
+        "   −2σ ┤════════════════════════  banda inferior (±2σ)",
+        "   −3σ ┤  ●UNH  ●TGT              ← LARGO (verde) = rebote banda inferior",
+        "       └────────────────────────► acciones (mayor σ → menor σ)",
+        "",
+        "   · Relleno = ACCIONABLE (perforó la banda) ",
+        "   · Hueco   = CERCA (watchlist)",
+        "   · Tamaño  = volumen relativo ",
+        "   · Color   = lado (CORTO rojo / LARGO verde)",
+        "   * extremo + volumen = atención ",
+        "   * centro (≈0σ) = ruido",
+        "   * sin reversión"
+      ]
+    }
+  },
+  "trading_15m": {
+    "bollinger_scatter_max": 10
+  }
+}

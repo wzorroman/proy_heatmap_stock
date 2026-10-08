@@ -32,6 +32,34 @@ def _container(request: Request) -> Container:
     return request.app.state.container
 
 
+# Confluencia de la fila J (J1 Momentum · J2 VWAP+IB · J3 Confluencia). Cache ~60 s
+# para no repetir los tres scans en cada parcial HTMX.
+_J_CONF = {"ts": None, "cnt": None}
+
+
+def _j_confluencia(c: Container):
+    """`Counter` con en cuántos de los 3 paneles de la fila J aparece cada símbolo."""
+    from collections import Counter
+
+    ts = _J_CONF.get("ts")
+    if ts is not None and (now_utc() - ts).total_seconds() < 60 and _J_CONF.get("cnt"):
+        return _J_CONF["cnt"]
+
+    cnt: Counter = Counter()
+    for r in c.oportunidad_15m_service.scan():
+        cnt[r["symbol"]] += 1
+    for r in c.vwap_ib_service.scan():
+        cnt[r["symbol"]] += 1
+    vol = {r["symbol"]: r.get("vol_ratio") for r in c.screener_15m_service.scan()}
+    for f in c.confluencia_service.scan(vol_map=vol):
+        if f.get("setup"):
+            cnt[f["symbol"]] += 1
+
+    _J_CONF["ts"] = now_utc()
+    _J_CONF["cnt"] = cnt
+    return cnt
+
+
 def _fmt_hora_lima(iso: str) -> str:
     """ISO UTC → hora local de Lima (America/Lima) legible: '30/09 15:34'."""
     try:
@@ -42,18 +70,23 @@ def _fmt_hora_lima(iso: str) -> str:
     return local.strftime("%d/%m %H:%M")
 
 
-def _card(request: Request, titulo, chart_id, option, *, nota=None, altura=280, accent=None, fill=False):
+def _card(request: Request, titulo, chart_id, option, *, nota=None, altura=280, accent=None, fill=False, codigo=None, leyenda=None, leyenda_nota=None, ayuda=None, tf=None):
     return templates.TemplateResponse(
         request,
         "partials/card_chart.html",
         {
             "titulo": titulo,
+            "codigo": codigo,
             "chart_id": chart_id,
             "option": option,
             "nota": nota,
             "altura": altura,
             "accent": accent,
             "fill": fill,
+            "leyenda": leyenda,
+            "leyenda_nota": leyenda_nota,
+            "ayuda": ayuda,
+            "tf": tf,
         },
     )
 
@@ -98,6 +131,7 @@ def sectors(request: Request):
         charts.sectors_option(sectores),
         nota=f"{len(sectores)} sectores · cambio {tf}",
         fill=True,
+        codigo=c.settings.chart_code("sectores"),
     )
 
 
@@ -105,15 +139,19 @@ def sectors(request: Request):
 def momentum(request: Request):
     c = _container(request)
     data = c.momentum_service.top_bottom()
+    logos = {f["symbol"]: logo_url(f["symbol"]) for f in data["top"] + data["bottom"]}
     return _card(
-        request, "Momentum — top/bottom (1D)", "chart-momentum",
-        charts.momentum_option(data["top"], data["bottom"]),
+        request, c.settings.chart_title("momentum", default="Momentum — top/bottom"), "chart-momentum",
+        charts.momentum_option(data["top"], data["bottom"], logos=logos),
         nota=(
             f'<span class="pos">▲ alcistas</span> · <span class="neg">▼ bajistas</span> · '
             f'{data["n"]} activos con cambio'
         ),
         altura=460,
+        fill=True,
         accent=charts.AZUL,
+        codigo=c.settings.chart_code("momentum"),
+        tf=c.settings.chart_tf("momentum"),
     )
 
 
@@ -134,46 +172,21 @@ def momentum(request: Request):
 #     )
 
 
-@router.get("/volume", response_class=HTMLResponse)
-def volume(request: Request):
-    c = _container(request)
-    data = c.heatmap_service.anomalia_volumen()
-    categorias = [d["symbol"] for d in data][::-1]
-    valores = [round(d["ratio"], 2) for d in data][::-1]
-    return _card(
-        request, "Anomalía de volumen", "chart-volume",
-        charts.bar_option(categorias, valores, color_por_signo=False),
-        nota="volumen / media 10d",
-        altura=340,
-    )
-
-
-@router.get("/range52w", response_class=HTMLResponse)
-def range52w(request: Request):
-    c = _container(request)
-    data = c.heatmap_service.rango_52w()
-    categorias = [d["symbol"] for d in data][::-1]
-    valores = [round(d["pct"], 1) for d in data][::-1]
-    return _card(
-        request, "Posición en rango 52s", "chart-range52w",
-        charts.bar_option(categorias, valores, sufijo="%", umbral=50.0),
-        nota="0% = mínimo 52s · 100% = máximo 52s",
-        altura=340,
-    )
-
-
 @router.get("/rsi_limites", response_class=HTMLResponse)
 def rsi_limites(request: Request):
     """RSI de las acciones top por capitalización EN OPORTUNIDAD (≥60 o ≤40)."""
     c = _container(request)
     puntos = c.heatmap_service.top_equity_rsi()
+    for p in puntos:
+        p["ticker"] = p["symbol"].split(":")[-1]
+        p["logo"] = logo_url(p["symbol"])
     op_alto = c.settings.business("rsi", "oportunidad_alto", default=60)
     op_bajo = c.settings.business("rsi", "oportunidad_bajo", default=40)
     lim_alto = c.settings.business("rsi", "limite_alto", default=70)
     lim_bajo = c.settings.business("rsi", "limite_bajo", default=30)
     return _card(
         request,
-        f"RSI 1D · acciones top por capitalización (≥{op_alto} / ≤{op_bajo})",
+        c.settings.chart_title("rsi_limites", default="RSI · acciones top por capitalización"),
         "chart-rsi-scatter",
         charts.scatter_rsi_option(
             puntos,
@@ -183,12 +196,15 @@ def rsi_limites(request: Request):
             limite_bajo=lim_bajo,
         ),
         nota=(
-            f'{len(puntos)} acciones en oportunidad · '
-            f'<span class="neg">≥{op_alto}</span> · <span class="pos">≤{op_bajo}</span> · '
-            f'límites {lim_bajo}/{lim_alto} en amarillo · tamaño = capitalización'
+            f'{len(puntos)} acciones en oportunidad (≥{op_alto} / ≤{op_bajo}) · '
+            f'<span class="neg">relleno = extremo</span> ({lim_bajo}/{lim_alto}) · '
+            f'<span class="pos">hueco = oportunidad</span> · tamaño = capitalización'
         ),
+        ayuda=c.settings.chart_help("rsi_limites"),
+        tf=c.settings.chart_tf("rsi_limites"),
         accent=charts.AZUL,
         fill=True,
+        codigo=c.settings.chart_code("rsi_limites"),
     )
 
 
@@ -273,7 +289,7 @@ def alcistas(request: Request):
     return templates.TemplateResponse(
         request,
         "partials/momentum_lista.html",
-        {"titulo": "Alcistas del Día", "color": "verde", "items": _momentum_items(data["top"])},
+        {"titulo": "Alcistas del Día", "codigo": c.settings.chart_code("alcistas"), "color": "verde", "items": _momentum_items(data["top"])},
     )
 
 
@@ -284,7 +300,7 @@ def bajistas(request: Request):
     return templates.TemplateResponse(
         request,
         "partials/momentum_lista.html",
-        {"titulo": "Bajistas del Día", "color": "rojo", "items": _momentum_items(data["bottom"])},
+        {"titulo": "Bajistas del Día", "codigo": c.settings.chart_code("bajistas"), "color": "rojo", "items": _momentum_items(data["bottom"])},
     )
 
 
@@ -292,12 +308,24 @@ def bajistas(request: Request):
 def change_rsi(request: Request):
     c = _container(request)
     puntos = c.momentum_service.change_rsi()
+    for p in puntos:
+        p["ticker"] = p["symbol"].split(":")[-1]
+        p["logo"] = logo_url(p["symbol"])
+    visibles = charts.change_rsi_visible(puntos)
     return _card(
-        request, "Momentum Confirmado — Change vs RSI (1D)", "chart-change-rsi",
-        charts.change_rsi_option(puntos),
-        nota=f"{len(puntos)} acciones · color por cambio · líneas RSI 30/70",
+        request, c.settings.chart_title("change_rsi", default="Momentum Confirmado — Change vs RSI"), "chart-change-rsi",
+        charts.change_rsi_option(visibles),
+        nota=(
+            f"{len(visibles)} de {len(puntos)} acciones · zona central (RSI 40–60 "
+            f"o cambio ±0.3%) oculta · color por cambio · líneas RSI 30/70"
+        ),
+        leyenda_nota="Eje X = Change %",
+        ayuda=c.settings.chart_help("change_rsi"),
+        tf=c.settings.chart_tf("change_rsi"),
         altura=460,
+        fill=True,
         accent=charts.VERDE,
+        codigo=c.settings.chart_code("change_rsi"),
     )
 
 
@@ -390,6 +418,7 @@ def score_history(request: Request):
             f"<span style='color:#b8c2cc'>▮</span> apertura NY {apertura_local} {tz_label(c.settings.timezone)}"
         ),
         altura=260,
+        codigo=c.settings.chart_code("score_history"),
     )
 
 
@@ -435,6 +464,7 @@ def multiframe(request: Request):
         ),
         accent=charts.AMARILLO,
         fill=True,
+        codigo=c.settings.chart_code("multiframe"),
     )
 
 
@@ -707,6 +737,7 @@ def sector_15m(request: Request):
         charts.sector_15m_option(sectores),
         nota=f"{len(sectores)} sectores · cambio medio 15m · área = nº de acciones",
         fill=True,
+        codigo=c.settings.chart_code("sector_15m"),
     )
 
 
@@ -743,6 +774,219 @@ def divergencia(request: Request):
     for f in data["filas"]:
         f["logo"] = logo_url(f["symbol"])
     return templates.TemplateResponse(request, "partials/divergencia.html", data)
+
+
+@router.get("/oportunidad_15m", response_class=HTMLResponse)
+def oportunidad_15m(request: Request):
+    """Panel 2.1 — Oportunidades Momentum 15m (continuación con volumen)."""
+    c = _container(request)
+    cnt = _j_confluencia(c)
+    filas = c.oportunidad_15m_service.scan()
+    for f in filas:
+        f["logo"] = logo_url(f["symbol"])
+        f["n_paneles"] = cnt.get(f["symbol"], 0)
+        f["confluencia"] = f["n_paneles"] >= 2
+    return templates.TemplateResponse(
+        request,
+        "partials/oportunidad_15m.html",
+        {"filas": filas, "total": len(filas)},
+    )
+
+
+@router.get("/bollinger_15m", response_class=HTMLResponse)
+def bollinger_15m(request: Request):
+    """Panel 2.2 — Reversión en Bollinger 15m (pinchazos de banda + volumen)."""
+    c = _container(request)
+    filas = c.bollinger_15m_service.scan()
+    for f in filas:
+        f["logo"] = logo_url(f["symbol"])
+    return templates.TemplateResponse(
+        request,
+        "partials/bollinger_15m.html",
+        {"filas": filas},
+    )
+
+
+@router.get("/bollinger_scatter", response_class=HTMLResponse)
+def bollinger_scatter(request: Request):
+    """Reversión Bollinger 15m en estilo dot-plot (RSI), duplicado para ajuste."""
+    c = _container(request)
+    tope = int(c.settings.business("trading_15m", "bollinger_scatter_max", default=20))
+    k = float(c.settings.business("trading_15m", "bollinger_k", default=2.0))
+    filas = c.bollinger_15m_service.scan(limit=tope)
+    for f in filas:
+        f["logo"] = logo_url(f["symbol"])
+    tol_sigma = float(c.settings.business("trading_15m", "bollinger_tol_sigma", default=0.5))
+    leyenda = [
+        {"tipo": "punto", "color": charts.ROJO, "texto": "<b>CORTO</b> · rechazo banda superior"},
+        {"tipo": "punto", "color": charts.VERDE, "texto": "<b>LARGO</b> · rebote banda inferior"},
+        {"tipo": "punto", "color": charts.MUTED, "texto": "relleno = <b>superó</b> banda"},
+        {"tipo": "hueco", "color": charts.AZUL, "texto": "hueco = <b>cerca</b> (watchlist)"},
+        {"tipo": "linea", "color": charts.AMARILLO, "texto": f"bandas de Bollinger (±{k:g}σ)"},
+        {"tipo": "linea-solida", "color": charts.MUTED, "texto": "SMA20 (media)"},
+    ]
+    return _card(
+        request,
+        "Reversión Bollinger 15m — dot-plot (σ)",
+        "chart-bollinger-scatter",
+        charts.scatter_bollinger_option(filas, k=k),
+        nota=(
+            f"{len(filas)} extremos (≤{tol_sigma:g}σ de la banda o que la superaron) · "
+            "ordenados por σ"
+        ),
+        leyenda=leyenda,
+        leyenda_nota=(
+            "Eje Y = posición en la banda (σ): +2 = banda superior · 0 = SMA20 · −2 = banda inferior. "
+            "Punto relleno = perforó la banda (accionable); hueco = cerca (watchlist). "
+            "Score = 2·volumen + penetración (ver tooltip)."
+        ),
+        ayuda=c.settings.chart_help("bollinger_scatter"),
+        altura=360,
+        accent=charts.AMARILLO,
+        codigo=c.settings.chart_code("bollinger_scatter"),
+    )
+
+
+@router.get("/tendencia_15m", response_class=HTMLResponse)
+def tendencia_15m(request: Request):
+    """Panel K2 — Tendencias en Marcha (ADX 15m): mismos de K1 (σ × ADX)."""
+    c = _container(request)
+    adx_min = float(c.settings.business("tendencia", "adx_min", default=25))
+    k = float(c.settings.business("trading_15m", "bollinger_k", default=2.0))
+    filas = c.tendencia_15m_service.scan()
+    for f in filas:
+        f["logo"] = logo_url(f["symbol"])
+    leyenda = [
+        {"tipo": "punto", "color": charts.ROJO, "texto": "<b>CORTO</b> · rechazo banda superior"},
+        {"tipo": "punto", "color": charts.VERDE, "texto": "<b>LARGO</b> · rebote banda inferior"},
+        {"tipo": "linea", "color": charts.AMARILLO, "texto": f"bandas de Bollinger (±{k:g}σ)"},
+        {"tipo": "linea-solida", "color": charts.MUTED, "texto": "SMA20 (media)"},
+    ]
+    return _card(
+        request,
+        "Tendencias en Marcha (ADX 15m) — filtro de régimen de K1",
+        "chart-tendencia",
+        charts.scatter_tendencia_option(filas, adx_min=adx_min, k=k),
+        nota=(
+            f"{len(filas)} activos (universo de K1 ∩ ADX ≥ {adx_min:g}) · "
+            "X = posición en banda (σ) · Y = ADX 15m"
+        ),
+        leyenda=leyenda,
+        leyenda_nota=(
+            "Cuadrante: arriba = tendencia fuerte (ADX ≥ 25); derecha/left = "
+            "banda superior/inferior. K1+K2 leídos juntos: extremo de banda × "
+            "régimen de tendencia."
+        ),
+        ayuda=c.settings.chart_help("tendencia_15m"),
+        altura=360,
+        accent=charts.AMARILLO,
+        codigo=c.settings.chart_code("tendencia_15m"),
+    )
+
+
+@router.get("/divergencia_5m", response_class=HTMLResponse)
+def divergencia_5m(request: Request):
+    """Panel K3 — Divergencia Precio/RSI 5m (scatter RSI ini × RSI fin)."""
+    c = _container(request)
+    filas = c.divergencia_5m_service.scan()
+    # Confluencia de la tríada K: K1 (banda) ∩ K2 (régimen) ∩ K3 (divergencia).
+    k2_syms = {r["symbol"] for r in c.tendencia_15m_service.scan()}
+    n_conf = 0
+    for f in filas:
+        f["logo"] = logo_url(f["symbol"])
+        f["confluencia"] = f["symbol"] in k2_syms
+        n_conf += 1 if f["confluencia"] else 0
+    leyenda = [
+        {"tipo": "punto", "color": charts.VERDE, "texto": "<b>ALCISTA</b> · mínimo de precio ↓ con RSI ↑"},
+        {"tipo": "punto", "color": charts.ROJO, "texto": "<b>BAJISTA</b> · máximo de precio ↑ con RSI ↓"},
+        {"tipo": "hueco", "color": charts.AMARILLO, "texto": "<b>confluencia</b> K1+K2+K3 (anillo dorado)"},
+        {"tipo": "linea-solida", "color": charts.MUTED, "texto": "diagonal y = x (RSI sin cambio)"},
+    ]
+    return _card(
+        request,
+        c.settings.chart_title("divergencia_5m", default="Divergencia Precio / RSI"),
+        "chart-divergencia-5m",
+        charts.scatter_divergencia_5m_option(filas),
+        nota=(
+            f"{len(filas)} divergencias 5m · <b>{n_conf}</b> en confluencia con K1+K2 (alta convicción) · "
+            "X = RSI ini · Y = RSI fin"
+        ),
+        leyenda=leyenda,
+        leyenda_nota=(
+            "Tríada K: K1 «dónde» (extremo de banda) · K2 «¿es fiable?» (régimen ADX) · K3 «¿cuándo entrar?» "
+            "(confirmación de giro). Los puntos con anillo dorado están en K1+K2+K3 = alta convicción."
+        ),
+        ayuda=c.settings.chart_help("divergencia_5m"),
+        tf=c.settings.chart_tf("divergencia_5m"),
+        altura=360,
+        accent=charts.VERDE,
+        codigo=c.settings.chart_code("divergencia_5m"),
+    )
+
+
+@router.get("/vwap_ib", response_class=HTMLResponse)
+def vwap_ib(request: Request):
+    """Panel 2.5 (J2) — VWAP + Initial Balance: scatter estructura (Opción C)."""
+    c = _container(request)
+    cnt = _j_confluencia(c)
+    filas = c.vwap_ib_service.scan()
+    for f in filas:
+        f["logo"] = logo_url(f["symbol"])
+        f["hora"] = format_hora(f.get("hora_utc"), c.settings.timezone)
+        f["n_paneles"] = cnt.get(f["symbol"], 0)
+        f["confluencia"] = f["n_paneles"] >= 2
+    leyenda = [
+        {"tipo": "punto", "color": charts.VERDE, "texto": "<b>LARGO</b> (IB UP + > VWAP)"},
+        {"tipo": "punto", "color": charts.ROJO, "texto": "<b>CORTO</b> (IB DOWN + < VWAP)"},
+        {"tipo": "hueco", "color": charts.AMARILLO, "texto": "<b>confluencia</b> fila J (anillo dorado)"},
+        {"tipo": "linea-solida", "color": charts.MUTED, "texto": "VWAP (dist = 0)"},
+    ]
+    return _card(
+        request,
+        c.settings.chart_title("vwap_ib", default="VWAP + Initial Balance — continuación"),
+        "chart-vwap-ib",
+        charts.scatter_vwap_ib_option(filas),
+        nota=f"{len(filas)} rupturas IB con VWAP a favor + volumen · X = dist. VWAP · Y = volumen",
+        leyenda=leyenda,
+        leyenda_nota=(
+            "Izquierda del eje = bajo VWAP (cortos, IB DOWN); derecha = sobre VWAP (largos, IB UP). "
+            "Más arriba = mayor volumen (más convicción)."
+        ),
+        ayuda=c.settings.chart_help("vwap_ib"),
+        tf=c.settings.chart_tf("vwap_ib"),
+        altura=360,
+        accent=charts.AZUL,
+        codigo=c.settings.chart_code("vwap_ib"),
+    )
+
+
+@router.get("/confluencia_fuerte", response_class=HTMLResponse)
+def confluencia_fuerte(request: Request):
+    """Panel 2.3 (J3) — Confluencia Fuerte 5m/15m/1D + Volumen."""
+    c = _container(request)
+    vol_map = {r["symbol"]: r.get("vol_ratio") for r in c.screener_15m_service.scan()}
+    filas = [f for f in c.confluencia_service.scan(vol_map=vol_map) if f.get("setup")]
+    filas.sort(
+        key=lambda r: (
+            0 if (r.get("setup") or "").startswith("ALTA") else 1,
+            -abs(r["score"]),
+        )
+    )
+    tope = int(c.settings.business("confluencia_fuerte", "max", default=10))
+    filas = filas[:tope]
+    cnt = _j_confluencia(c)
+    for f in filas:
+        f["logo"] = logo_url(f["symbol"])
+        f["ticker"] = f["symbol"].split(":")[-1]
+        f["n_paneles"] = cnt.get(f["symbol"], 0)
+        f["confluencia"] = f["n_paneles"] >= 2
+        v = f.get("vol_ratio") or 0
+        f["vol_pct"] = min(100.0, max(0.0, (v - 1.0) / 2.5 * 100.0))
+    return templates.TemplateResponse(
+        request,
+        "partials/confluencia_fuerte.html",
+        {"filas": filas, "codigo": c.settings.chart_code("confluencia_fuerte")},
+    )
 
 
 @router.get("/tabla_sector", response_class=HTMLResponse)

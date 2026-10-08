@@ -1,6 +1,6 @@
 <article class="card">
   <div class="ts-head">
-    <h2>{{ titulo }}</h2>
+    <h2>{% if chart_code('calendar') %}<span class="chart-code">{{ chart_code('calendar') }}</span>{% endif %}{{ titulo }}</h2>
     <div class="ts-filters">
       <label class="ts-filter">
         <span class="muted small">País</span>

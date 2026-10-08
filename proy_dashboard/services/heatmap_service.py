@@ -41,26 +41,6 @@ class HeatmapService:
             for r in rows
         ]
 
-    def anomalia_volumen(self, n: int | None = None) -> list[dict]:
-        n = int(n or self.settings.business("panels", "top_n", default=15))
-        data = []
-        for item in self.treemap():
-            vol, avg = item.get("volume"), item.get("avg_vol_10d")
-            if vol and avg:
-                data.append({"symbol": item["symbol"], "ratio": vol / avg})
-        data.sort(key=lambda d: d["ratio"], reverse=True)
-        return data[:n]
-
-    def rango_52w(self, n: int | None = None) -> list[dict]:
-        n = int(n or self.settings.business("panels", "top_n", default=15))
-        data = []
-        for item in self.treemap():
-            price, hi, lo = item.get("price"), item.get("high_52w"), item.get("low_52w")
-            if price is not None and hi is not None and lo is not None and hi != lo:
-                data.append({"symbol": item["symbol"], "pct": (price - lo) / (hi - lo) * 100.0})
-        data.sort(key=lambda d: d["pct"], reverse=True)
-        return data[:n]
-
     def sectores(self) -> list[dict]:
         min_activos = int(self.settings.business("panels", "sector_min_assets", default=5))
         rows = self.heatmap_repo.sectores(min_activos=min_activos)

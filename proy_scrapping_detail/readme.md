@@ -11,6 +11,7 @@
 8. [Scripts de Ejecución (Shell)](#scripts-de-ejecución-shell)
 9. [Estructura de Datos](#estructura-de-datos)
 10. [Mantenimiento y Resolución de Problemas](#mantenimiento-y-resolución-de-problemas)
+11. [Anexo — Gestión de Activos del Radar](#anexo--gestión-de-activos-del-radar)
 
 ---
 
@@ -459,3 +460,144 @@ crontab -e
 3. **Prevención de Spam**: Monitor envía alertas cada 30 minutos máximo
 4. **Redundancia**: Scraper tiene símbolos primarios y de respaldo
 5. **Logs**: Rotación automática cada 2 días para evitar acumulación
+
+---
+
+## **Anexo — Gestión de Activos del Radar**
+
+> Procedimiento operativo para dar de alta, modificar o dar de baja activos del radar V5 de forma segura y coherente con el heatmap y el dashboard.
+> 
+> Para la versión detallada, casos de uso y propuesta de automatización, ver [`playbooks/gestion_activos.md`](playbooks/gestion_activos.md).
+
+### **A.1 Fuente única de verdad**
+
+El universo de activos que captura el radar vive en **una sola variable**:
+
+```python
+# proy_scrapping_detail/config.py
+CONFIG_ACTIVOS = {
+    "CATEGORIA": {
+        "CLAVE_LOGICA": {
+            "primario": "EXCHANGE:TICKER",
+            "respaldo": "EXCHANGE:TICKER",
+        },
+        ...
+    },
+}
+```
+
+- `primario`: símbolo que TradingView debe reconocer.
+- `respaldo`: alternativa si el primario falla (puede ser igual).
+
+Todo lo demás (`dim_asset`, CSV, tablas de BD) se deriva de ahí.
+
+### **A.2 Requisitos mínimos para insertar un activo**
+
+| # | Requisito | Verificación |
+|---|---|---|
+| 1 | Formato `EXCHANGE:TICKER` | Ej: `NASDAQ:MU` |
+| 2 | Símbolo válido en TradingView | `GET /symbol?symbol=NASDAQ:MU&fields=close` devuelve datos |
+| 3 | Exchange soportado | `NASDAQ`/`NYSE`/`AMEX` usan batch eficiente; otros usan consulta individual |
+| 4 | Liquidez y cotización activa | Tiene volumen y precio reciente |
+| 5 | Categoría lógica definida | Coincide con sector o función del activo |
+| 6 | Sin duplicados | Ni la clave ni el ticker existen ya en otra categoría |
+| 7 | Impacto en dashboard evaluado | Se sabe si es para radar, heatmap o trading |
+
+### **A.3 Agregar un nuevo activo**
+
+1. Validar el símbolo en TradingView:
+   ```bash
+   curl -s "https://scanner.tradingview.com/symbol?symbol=NASDAQ:SPCX&fields=close,volume,RSI"
+   ```
+
+2. Editar `config.py` y añadir la entrada en la categoría correcta.
+
+3. Sincronizar `dim_asset`:
+   ```bash
+   cd /home/wilson/CODE_MAIN/OPENCODE_WZ/proy_heatmap_stock/proy_scrapping_detail
+   ./venv/bin/python seed_symbols.py --dry-run
+   ./venv/bin/python seed_symbols.py
+   ```
+   > ⚠️ `seed_symbols.py` solo hace **altas nuevas**. Si el símbolo ya existía en `dim_asset`, actualizar `source_category` manualmente:
+   > ```sql
+   > UPDATE dim_asset
+   > SET source_category = 'NOMBRE_CATEGORIA', updated_at = CURRENT_TIMESTAMP
+   > WHERE symbol = 'EXCHANGE:TICKER';
+   > ```
+
+4. Poblar datos:
+
+   **Dentro del horario NYSE:** esperar al cron o ejecutar:
+   ```bash
+   ./venv/bin/python scraper_live_tradingview_v5.py
+   ```
+
+   **Fuera del horario NYSE (prueba/manual):** el scraper omite equity/ETF. Forzar captura con:
+   ```bash
+   ./venv/bin/python scripts/build_latest_tick.py --prime
+   ./venv/bin/python scripts/build_indicator_tf.py --from-scan
+   ```
+   > Estos scripts solo poblan `latest_market_tick` e `indicator_tf`; `fact_market_series` se llenará en el próximo ciclo dentro de horario.
+
+5. Verificar captura:
+   ```bash
+   ./venv/bin/python scripts/build_latest_tick.py --status
+   ./venv/bin/python scripts/build_indicator_tf.py --status --days 1
+   ```
+
+6. Verificar en BD:
+   ```sql
+   SELECT a.symbol,
+          (SELECT count(*) FROM fact_market_series s WHERE s.asset_id = a.asset_id) AS ticks,
+          (SELECT count(*) FROM latest_market_tick l WHERE l.asset_id = a.asset_id) AS latest,
+          (SELECT count(*) FROM fact_market_indicator_tf i WHERE i.asset_id = a.asset_id) AS tf
+   FROM dim_asset a
+   WHERE a.symbol IN ('NASDAQ:SPCX', 'NASDAQ:SKHY');
+   ```
+
+### **A.4 Modificar un activo**
+
+1. Editar `config.py`.
+2. Si cambia la categoría, ejecutar `seed_symbols.py` para actualizar `source_category`.
+3. Si cambia el símbolo primario/respaldo, el scraper lo aplica en el siguiente ciclo. Los datos históricos bajo el símbolo anterior **no se migran**.
+4. Verificar con `build_latest_tick.py --status`.
+
+### **A.5 Eliminar un activo**
+
+1. Quitar la entrada de `CONFIG_ACTIVOS`.
+2. (Recomendado) Marcar inactivo en `dim_asset`:
+   ```sql
+   UPDATE dim_asset
+   SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP
+   WHERE symbol = 'NASDAQ:XYZ';
+   ```
+3. Los datos históricos no se borran automáticamente. Si se requiere borrado, hacerlo manualmente con criterio de retención.
+4. Verificar que el dashboard ya no lo muestre.
+
+### **A.6 Validaciones posteriores**
+
+```bash
+# 1. Universo del radar
+./venv/bin/python seed_symbols.py --check
+
+# 2. Últimos ticks
+./venv/bin/python scripts/build_latest_tick.py --status
+
+# 3. Indicadores multi-TF
+./venv/bin/python scripts/build_indicator_tf.py --status --days 1
+
+# 4. Health del dashboard
+curl -s http://localhost:8100/api/health | python3 -m json.tool
+```
+
+### **A.7 Propuesta de automatización**
+
+Se propone crear `scripts/gestion_activos.py` que, a partir de un YAML (`activos_cambios.yaml`), permita:
+
+- Validar símbolos contra TradingView.
+- Actualizar `config.py` de forma idempotente.
+- Ejecutar `seed_symbols.py` automáticamente.
+- Opcionalmente ejecutar el scraper para poblar datos inmediatos.
+- Generar reporte de cambios y respaldar `config.py`.
+
+Ver [`playbooks/gestion_activos.md`](playbooks/gestion_activos.md) para el diseño completo, casos de uso y checklist.

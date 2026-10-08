@@ -10,6 +10,7 @@ nunca lee `os.environ` ni el JSON directamente. Cero números mágicos.
 
 from __future__ import annotations
 
+import copy
 import json
 import os
 from dataclasses import dataclass
@@ -23,9 +24,12 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 PROJECT_PATH = Path(__file__).resolve().parent.parent
 DEFAULT_ENV_FILE = PROJECT_PATH / ".env"
 DEFAULT_CONFIG_FILE = PROJECT_PATH / "config_dashboard.json"
+# Config por gráfico: un JSON por gráfico (A1, A2, ...). Se fusionan sobre el
+# config global en orden de nombre de archivo.
+DEFAULT_CHARTS_DIR = PROJECT_PATH / "config" / "charts"
 
 # Versión de la aplicación (D17). Subir al cerrar cada fase.
-VERSION = "1.0.21"
+VERSION = "2.1.0"
 
 
 def _get(key: str, default: Optional[str] = None) -> Optional[str]:
@@ -114,6 +118,38 @@ class Settings:
             node = node[key]
         return node
 
+    def chart_meta(self, slug: str) -> dict:
+        """Metadatos de un gráfico (código, título) declarados en config/charts/*.json."""
+        meta = self.config.get("meta")
+        if not isinstance(meta, dict):
+            return {}
+        return meta.get(slug) or {}
+
+    def chart_code(self, slug: str) -> str:
+        """Código identificador del gráfico (A1, A2, …); '' si no está declarado."""
+        return str(self.chart_meta(slug).get("codigo") or "")
+
+    def chart_title(self, slug: str, default: str = "") -> str:
+        """Título declarado del gráfico; `default` si no está definido."""
+        return str(self.chart_meta(slug).get("titulo") or default)
+
+    def chart_tf(self, slug: str) -> str:
+        """Tiempo de evaluación declarado del gráfico (p. ej. '15m', '1D'); '' si no hay."""
+        return str(self.chart_meta(slug).get("tf") or "")
+
+    def chart_help(self, slug: str) -> Optional[str]:
+        """Texto de ayuda del gráfico (mapa del popup '(+)'), o None.
+
+        Se declara en ``config/charts/*.json`` como lista de líneas
+        (``["  ▲", "  │ …"]``) o como un único string con saltos ``\\n``.
+        """
+        ayuda = self.chart_meta(slug).get("ayuda")
+        if isinstance(ayuda, (list, tuple)):
+            return "\n".join(str(linea) for linea in ayuda) or None
+        if isinstance(ayuda, str):
+            return ayuda.strip("\n") or None
+        return None
+
     def db_kwargs(self) -> dict:
         """kwargs listos para PostgreSQLConnector."""
         return {
@@ -125,11 +161,50 @@ class Settings:
         }
 
 
+def _deep_merge(base: dict, extra: dict) -> dict:
+    """Fusiona `extra` sobre `base` recursivamente (dicts anidados; el resto pisa)."""
+    for key, valor in extra.items():
+        if isinstance(valor, dict) and isinstance(base.get(key), dict):
+            base[key] = _deep_merge(base[key], valor)
+        else:
+            base[key] = copy.deepcopy(valor)
+    return base
+
+
+def _charts_dir(config_path: Optional[Path]) -> Optional[Path]:
+    """Directorio de config por gráfico, derivado de la ruta del config base.
+
+    Soporta `config/charts/` junto al config (producción) y una copia aislada en
+    tests. Devuelve `None` si no existe.
+    """
+    if config_path is not None:
+        for candidato in (
+            config_path.parent / "charts",
+            config_path.parent / "config" / "charts",
+        ):
+            if candidato.is_dir():
+                return candidato
+        return None
+    return DEFAULT_CHARTS_DIR if DEFAULT_CHARTS_DIR.is_dir() else None
+
+
+def _load_config(config_path: Optional[Path], charts_dir: Optional[Path] = None) -> dict:
+    """Carga el config global y fusiona, en orden de nombre, los JSON por gráfico."""
+    cfg_path = Path(config_path) if config_path else DEFAULT_CONFIG_FILE
+    config = json.loads(cfg_path.read_text(encoding="utf-8"))
+    directorio = charts_dir if charts_dir is not None else _charts_dir(cfg_path)
+    if directorio and directorio.is_dir():
+        for archivo in sorted(directorio.glob("*.json")):
+            config = _deep_merge(config, json.loads(archivo.read_text(encoding="utf-8")))
+    return config
+
+
 def load_settings(
     env_file: Optional[Path | str] = None,
     config_path: Optional[Path | str] = None,
+    charts_dir: Optional[Path | str] = None,
 ) -> Settings:
-    """Carga `.env` + `config_dashboard.json` y construye `Settings`.
+    """Carga `.env` + config global + `config/charts/*.json` y construye `Settings`.
 
     Parámetros pensados para tests (aislar rutas). `load_dotenv` no sobreescribe
     variables ya presentes en el entorno, así que `monkeypatch.setenv` manda.
@@ -137,7 +212,8 @@ def load_settings(
     load_dotenv(env_file or DEFAULT_ENV_FILE)
 
     cfg_path = Path(config_path) if config_path else DEFAULT_CONFIG_FILE
-    config = json.loads(cfg_path.read_text(encoding="utf-8"))
+    charts = Path(charts_dir) if charts_dir else None
+    config = _load_config(cfg_path, charts)
 
     log_dir = Path(_get("FILE_PATH_LOG", "./logs") or "./logs")
     if not log_dir.is_absolute():

@@ -1,0 +1,34 @@
+{
+  "meta": {
+    "vwap_ib": {
+      "codigo": "J2",
+      "titulo": "VWAP + Initial Balance — continuación",
+      "tf": "15m",
+      "ayuda": [
+        "Mapa general — VWAP + Initial Balance (continuación)",
+        "Eje X = distancia al VWAP (%) · Eje Y = volumen relativo",
+        "",
+        "   volumen",
+        "     ▲",
+        "     │  ● CORTO fuerte         ● LARGO fuerte",
+        "     │  IB DOWN, <VWAP        IB UP, >VWAP",
+        "  1x ┼──────────────┬──────────────",
+        "     │  ● CORTO débil          ● LARGO débil",
+        "     │                          (poca extensión)",
+        "     └───────┬───────┴───────┬───────►",
+        "            −%      0      +%",
+        "                    VWAP",
+        "",
+        "   verde = LARGO (IB UP + precio > VWAP)",
+        "   rojo  = CORTO (IB DOWN + precio < VWAP)",
+        "   Anillo dorado = confluencia fila J",
+        "   más arriba (volumen) y más lejos del VWAP = más convicción"
+      ]
+    }
+  },
+  "vwap_ib": {
+    "horas": 48,
+    "vol_min": 1.0,
+    "max": 10
+  }
+}

@@ -1,0 +1,36 @@
+<article class="card card-trading">
+  <h2>{% if chart_code('oportunidad_15m') %}<span class="chart-code">{{ chart_code('oportunidad_15m') }}</span>{% endif %}Oportunidades Momentum <span class="ib-time">15m</span></h2>
+  <p class="nota">{{ filas|length }} oportunidades · RSI 50-70 · ADX ≥25 · Vol ≥1.2x · > VWAP</p>
+  <div class="op-list">
+    {% for d in filas %}
+    <div class="op-item" data-symbol="{{ d.symbol }}"
+         hx-get="/partials/velas_15m?symbol={{ d.symbol|urlencode }}"
+         hx-target="#trading-velas-card"
+         hx-swap="innerHTML">
+      <div class="op-head">
+        <span class="sym">
+          {% if d.logo %}
+          <img class="slogo" src="{{ d.logo }}" alt="" loading="lazy">
+          {% else %}
+          <span class="slogo slogo-empty" aria-hidden="true"></span>
+          {% endif %}
+          {{ d.ticker }}
+          {% if d.confluencia %}<span class="conf-star" title="Confluencia fila J ({{ d.n_paneles }} paneles)">★</span>{% endif %}
+        </span>
+        <div class="op-head-right">
+          <span class="op-tag op-tag-close"><b>Close</b> {{ "%.2f"|format(d.close) }}</span>
+          <span class="op-tag"><b>RSI</b> {{ "%.1f"|format(d.rsi_15) }}</span>
+          <span class="zona zona-sm zona-COMPRAR">LARGO</span>
+        </div>
+      </div>
+      <div class="op-tags">
+        <span class="op-tag"><b>Chg</b> <span class="pct {{ 'pos' if d.change_pct >= 0 else 'neg' }}">{{ "%+.2f"|format(d.change_pct) }}%</span></span>
+        <span class="op-tag"><b>ADX</b> {{ "%.1f"|format(d.adx_15) }}</span>
+        <span class="op-tag"><b>Vol</b> {{ "%.2f"|format(d.vol_ratio) }}x</span>
+        <span class="op-tag"><b>VWAP</b> +{{ "%.2f"|format(d.dist_vwap) }}%</span>
+      </div>
+    </div>
+    {% endfor %}
+    {% if not filas %}<p class="muted">Sin oportunidades de momentum 15m en este momento.</p>{% endif %}
+  </div>
+</article>

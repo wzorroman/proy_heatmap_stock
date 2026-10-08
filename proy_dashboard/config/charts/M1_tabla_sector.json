@@ -1,0 +1,7 @@
+{
+  "meta": { "tabla_sector": { "codigo": "M1", "titulo": "Stocks por sector" } },
+  "tabla_sector": {
+    "default": "Technology Services",
+    "limite": 60
+  }
+}

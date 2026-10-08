@@ -1,5 +1,5 @@
 <article class="card">
-  <h2>{{ titulo }}</h2>
+  <h2>{% if chart_code('health') %}<span class="chart-code">{{ chart_code('health') }}</span>{% endif %}{{ titulo }}</h2>
   <ul class="health-list">
     {% for r in rows %}
     <li class="health-item">

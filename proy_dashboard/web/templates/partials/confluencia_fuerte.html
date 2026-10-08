@@ -1,0 +1,54 @@
+<article class="card card-trading cf-card">
+  <h2>{% if codigo %}<span class="chart-code">{{ codigo }}</span>{% endif %}Confluencia Fuerte <span class="ib-time">5m/15m/1D</span></h2>
+  <p class="nota">{{ filas|length }} alineadas + volumen · <span class="cf-lg cf-alc"></span> alcista · <span class="cf-lg cf-baj"></span> bajista</p>
+  <div class="cf-table">
+    <div class="cf-head">
+      <span class="cf-h-sym"></span>
+      <span class="cf-h">5m</span>
+      <span class="cf-h">15m</span>
+      <span class="cf-h">1D</span>
+      <span class="cf-h">Score</span>
+      <span class="cf-h">Vol</span>
+      <span class="cf-h">Señal</span>
+    </div>
+    {% for d in filas %}
+    {% set c5 = 'cf-alc' if d.signal_5m == 'ALCISTA' else ('cf-baj' if d.signal_5m == 'BAJISTA' else 'cf-neu') %}
+    {% set c15 = 'cf-alc' if d.signal_15m == 'ALCISTA' else ('cf-baj' if d.signal_15m == 'BAJISTA' else 'cf-neu') %}
+    {% set c1d = 'cf-alc' if d.signal_1d == 'ALCISTA' else ('cf-baj' if d.signal_1d == 'BAJISTA' else 'cf-neu') %}
+    <div class="cf-item" data-symbol="{{ d.symbol }}"
+         hx-get="/partials/velas_15m?symbol={{ d.symbol|urlencode }}"
+         hx-target="#trading-velas-card"
+         hx-swap="innerHTML">
+      <span class="cf-sym">
+        {% if d.logo %}
+        <img class="slogo" src="{{ d.logo }}" alt="" loading="lazy">
+        {% else %}
+        <span class="slogo slogo-empty" aria-hidden="true"></span>
+        {% endif %}
+        <span class="cf-sym-txt">{{ d.ticker }}</span>
+        {% if d.confluencia %}<span class="conf-star" title="Confluencia fila J ({{ d.n_paneles }} paneles)">★</span>{% endif %}
+        <span class="cf-tip">
+          <b>{{ d.symbol }}</b>
+          <span class="cf-tip-row"><span>5m</span><b>{{ d.signal_5m }}</b></span>
+          <span class="cf-tip-row"><span>15m</span><b>{{ d.signal_15m }}</b></span>
+          <span class="cf-tip-row"><span>1D</span><b>{{ d.signal_1d }}</b></span>
+          <span class="cf-tip-row"><span>RSI 5m/15m/1D</span><b>{{ '%.0f'|format(d.rsi_5m or 0) }}/{{ '%.0f'|format(d.rsi_15m or 0) }}/{{ '%.0f'|format(d.rsi_1d or 0) }}</b></span>
+          <span class="cf-tip-row"><span>Score</span><b>{{ '%+d'|format(d.score) }}</b></span>
+          <span class="cf-tip-row"><span>Volumen</span><b>{{ '%.2f'|format(d.vol_ratio or 0) }}x</b></span>
+          <span class="cf-tip-row"><span>Setup</span><b>{{ d.setup }}</b></span>
+        </span>
+      </span>
+      <i class="cf-dot {{ c5 }}" title="5m {{ d.signal_5m }}"></i>
+      <i class="cf-dot {{ c15 }}" title="15m {{ d.signal_15m }}"></i>
+      <i class="cf-dot {{ c1d }}" title="1D {{ d.signal_1d }}"></i>
+      <span class="cf-score {{ 'cf-score-pos' if d.score > 0 else ('cf-score-neg' if d.score < 0 else '') }}">{{ '%+d'|format(d.score) }}</span>
+      <span class="cf-vbar" title="Volumen {{ '%.2f'|format(d.vol_ratio or 0) }}x">
+        <span class="cf-vbar-track"><span class="cf-vbar-fill" style="width: {{ d.vol_pct|round|int }}%"></span></span>
+        <span class="cf-vbar-val">{{ '%.2f'|format(d.vol_ratio or 0) }}x</span>
+      </span>
+      <span class="zona zona-sm cf-signal zona-{{ 'COMPRAR' if d.signal == 'COMPRAR' else 'VENDER' }}">{{ 'BUY' if d.signal == 'COMPRAR' else 'SELL' }}</span>
+    </div>
+    {% endfor %}
+    {% if not filas %}<p class="muted">Sin confluencias con volumen en este momento.</p>{% endif %}
+  </div>
+</article>

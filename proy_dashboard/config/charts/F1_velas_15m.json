@@ -1,0 +1,8 @@
+{
+  "meta": { "velas_15m": { "codigo": "F1", "titulo": "Velas 15m" } },
+  "trading_15m": {
+    "default_symbol": "NASDAQ:NVDA",
+    "horas": 48,
+    "stale_min": 60
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "meta": { "sectores": { "codigo": "C1", "titulo": "Sectorial — cambio medio" } },
+  "sectores": {
+    "timeframe": "1D"
+  },
+  "panels": {
+    "sector_min_assets": 5,
+    "sector_signal_scale": 15,
+    "heatmap_windows": 12
+  }
+}

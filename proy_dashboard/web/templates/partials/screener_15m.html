@@ -1,5 +1,5 @@
 <article class="card card-trading">
-  <h2>Screener 15 min</h2>
+  <h2>{% if chart_code('screener_15m') %}<span class="chart-code">{{ chart_code('screener_15m') }}</span>{% endif %}Screener 15 min</h2>
   <p class="nota">Acciones equity · {{ nota_extra }} (total {{ total }})</p>
   <div class="screener-table">
     <table class="tabla">

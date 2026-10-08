@@ -1,19 +1,47 @@
 <article class="card{% if fill %} card-fill{% endif %}"{% if accent %} style="--panel-accent: {{ accent }};"{% endif %}>
-  <h2{% if accent %} class="tinted"{% endif %}>{{ titulo }}</h2>
+  <h2{% if accent %} class="tinted"{% endif %}>{% if codigo %}<span class="chart-code">{{ codigo }}</span>{% endif %}{{ titulo }}{% if tf %} <span class="ib-time">{{ tf }}</span>{% endif %}{% if ayuda %}<span class="chart-help" tabindex="0" role="button" aria-label="Ver referencia">(+)</span><span class="chart-help-pop"><pre>{{ ayuda }}</pre></span>{% endif %}</h2>
   {% if nota %}<p class="nota">{{ nota|safe }}</p>{% endif %}
+  {% if leyenda %}
+  <div class="leyenda">
+    {% for it in leyenda %}
+    <span class="leyenda-item">
+      <span class="leyenda-swatch {{ it.tipo }}" style="--c: {{ it.color }}"></span>
+      <span>{{ it.texto|safe }}</span>
+    </span>
+    {% endfor %}
+  </div>
+  {% endif %}
   <div id="{{ chart_id }}" class="chart"{% if not fill %} style="height: {{ altura|default(280) }}px;"{% endif %}></div>
+  {% if leyenda_nota %}<p class="leyenda-nota">{{ leyenda_nota|safe }}</p>{% endif %}
   <script>
     (function () {
       var opt = {{ option|tojson }};
       // Muestra solo el ticker (sin "NASDAQ:", "NYSE:", …) en ejes y puntos;
       // los tooltips conservan el símbolo completo.
       function ticker(v) { return v == null ? v : String(v).replace(/^[^:]+:/, ""); }
+      // Números: máximo 4 decimales; 2 si el valor lo permite (redondeo exacto).
+      function num(v) {
+        if (v == null || v === "") return "—";
+        var n = Number(v);
+        if (!isFinite(n)) return String(v);
+        var r = Math.round(n * 10000) / 10000;
+        return (Math.round(r * 100) / 100 === r) ? r.toFixed(2) : String(r);
+      }
 
       var ax = opt.yAxis;
       if (ax && !Array.isArray(ax) && ax.type === "category") {
         ax.axisLabel = ax.axisLabel || {};
-        if (ax.axisLabel.rich && ax.axisLabel.rich.sym) {
-          ax.axisLabel.formatter = function (v) { return "{sym|" + ticker(v) + "}"; };
+        var rich = ax.axisLabel.rich || {};
+        // Iconos por fila: rich con claves i0, i1, … (imagen de fondo).
+        var conIconos = Object.keys(rich).some(function (k) { return /^i\d+$/.test(k); });
+        if (rich.sym) {
+          if (conIconos) {
+            ax.axisLabel.formatter = function (v, i) { return "{i" + i + "| }{sym|" + ticker(v) + "}"; };
+          } else {
+            ax.axisLabel.formatter = function (v) { return "{sym|" + ticker(v) + "}"; };
+          }
+        } else if (conIconos) {
+          ax.axisLabel.formatter = function (v, i) { return "{i" + i + "| }" + ticker(v); };
         } else {
           ax.axisLabel.formatter = function (v) { return ticker(v); };
         }
@@ -24,6 +52,75 @@
           s.label.formatter = function (p) { return ticker(p.name); };
         }
       });
+
+      // Tooltip HTML con datos del punto (usado por el dot-plot Bollinger).
+      if (opt.tooltipHtml) {
+        opt.tooltip = opt.tooltip || {};
+        opt.tooltip.trigger = "item";
+        opt.tooltip.backgroundColor = "rgba(20, 26, 34, 0.96)";
+        opt.tooltip.borderColor = "#2a323d";
+        opt.tooltip.borderWidth = 1;
+        opt.tooltip.padding = 10;
+        opt.tooltip.textStyle = { color: "#dfe6ee", fontSize: 12 };
+        opt.tooltip.extraCssText = "border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.45);";
+        opt.tooltip.confine = true; // evita que el popup se salga del canvas/tarjeta
+        var ttAttr = opt.tooltipWidth ? (' style="width:' + opt.tooltipWidth + 'px"') : "";
+        var ttHead = function (e, p) {
+          var esc = function (v) { return v == null ? "" : String(v); };
+          var h = '<div class="tt-head">';
+          if (e.logo) h += '<img class="tt-logo" src="' + esc(e.logo) + '" alt="">';
+          h += '<div class="tt-id"><span class="tt-sym">' + esc(e.ticker || ticker(p.name)) + '</span>';
+          var b = e.badge;
+          if (b && b.text) {
+            var cls = b.side === "neg" ? "tt-neg" : (b.side === "neu" ? "tt-neu" : "tt-pos");
+            h += '<span class="tt-tipo ' + cls + '">' + esc(b.text) + '</span>';
+          } else if (e.tipo) {
+            h += '<span class="tt-tipo ' + (e.lado === "CORTO" ? "tt-neg" : "tt-pos") + '">' + esc(e.tipo) + '</span>';
+          }
+          h += '</div></div>';
+          return h;
+        };
+        if (opt.tooltipRows) {
+          // Tooltip genérico: filas declaradas por el chart.
+          opt.tooltip.formatter = function (p) {
+            var d = p.data || {}, e = d.extra || {};
+            var esc = function (v) { return v == null ? "" : String(v); };
+            var h = '<div class="tt"' + ttAttr + '>' + ttHead(e, p);
+            h += '<div class="tt-grid">';
+            (opt.tooltipRows || []).forEach(function (r) {
+              var v = e[r.key];
+              if (v == null) return;
+              var txt = (r.dec != null) ? Number(v).toFixed(r.dec) : num(v);
+              if (r.signed) txt = (v > 0 ? "+" : "") + txt;
+              if (r.suffix) txt += r.suffix;
+              h += '<div class="tt-row"><span>' + esc(r.label) + '</span><b>' + txt + '</b></div>';
+            });
+            h += '</div>';
+            if (e.confluencia) h += '<div class="tt-nota">★ Confluencia K1+K2+K3 (alta convicción)</div>';
+            h += '</div>';
+            return h;
+          };
+        } else {
+          // Tooltip del dot-plot Bollinger (K1): campos específicos.
+          opt.tooltip.formatter = function (p) {
+            var d = p.data || {}, e = d.extra || {};
+            var esc = function (v) { return v == null ? "" : String(v); };
+            var sgn = function (v) { return (v > 0 ? "+" : "") + num(v); };
+            var h = '<div class="tt"' + ttAttr + '>' + ttHead(e, p);
+            h += '<div class="tt-grid">';
+            h += '<div class="tt-row"><span>Posición</span><b>' + sgn(d.value) + 'σ</b></div>';
+            if (e.close != null) h += '<div class="tt-row"><span>Close</span><b>' + num(e.close) + (e.change_pct != null ? ' (' + sgn(e.change_pct) + '%)' : '') + '</b></div>';
+            if (e.dist_banda != null) h += '<div class="tt-row"><span>Dist. banda</span><b>' + sgn(e.dist_banda) + '%</b></div>';
+            if (e.vol_ratio != null) h += '<div class="tt-row"><span>Volumen</span><b>' + num(e.vol_ratio) + 'x</b></div>';
+            if (e.rsi_15 != null) h += '<div class="tt-row"><span>RSI 15m</span><b>' + num(e.rsi_15) + '</b></div>';
+            if (e.score != null) h += '<div class="tt-row tt-score"><span>Score</span><b>' + num(e.score) + '</b></div>';
+            h += '</div>';
+            if (e.nota) h += '<div class="tt-nota">' + esc(e.nota) + '</div>';
+            h += '</div>';
+            return h;
+          };
+        }
+      }
 
       window.renderChart("{{ chart_id }}", opt);
     })();

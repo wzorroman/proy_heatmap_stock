@@ -1,5 +1,5 @@
 <article class="card">
-  <h2>Sector Risk Gauge — Señal de Compra / Venta ({{ timeframe }})</h2>
+  <h2>{% if chart_code('sector_risk') %}<span class="chart-code">{{ chart_code('sector_risk') }}</span>{% endif %}Sector Risk Gauge — Señal de Compra / Venta ({{ timeframe }})</h2>
   <div class="gauge-legend">
     <span class="pos">◄ COMPRAR</span>
     <span class="neg">VENDER ►</span>

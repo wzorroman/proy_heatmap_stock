@@ -1,0 +1,9 @@
+{
+  "meta": { "ib_acciones": { "codigo": "E2", "titulo": "Rango inicial — por acción" } },
+  "trading_15m": {
+    "ib_minutos": 30,
+    "ib_horas": 48,
+    "ib_max_acciones": 15,
+    "ib_mercado_simbolos": ["AMEX:SPY", "NASDAQ:QQQ", "AMEX:IWM"]
+  }
+}

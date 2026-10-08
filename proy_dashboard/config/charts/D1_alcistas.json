@@ -1,0 +1,6 @@
+{
+  "meta": { "alcistas": { "codigo": "D1", "titulo": "Alcistas del Día" } },
+  "panels": {
+    "top_n": 15
+  }
+}

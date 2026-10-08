@@ -26,7 +26,9 @@ from repositories import (
     SessionRepository,
 )
 from services.bar_15m_service import Bar15mService
+from services.bollinger_15m_service import Bollinger15mService
 from services.confluencia_service import ConfluenciaService
+from services.divergencia_5m_service import Divergencia5mService
 from services.divergencia_service import DivergenciaService
 from services.event_service import EventService
 from services.health_service import HealthService
@@ -34,11 +36,14 @@ from services.heatmap_service import HeatmapService
 from services.indicator_service import IndicatorService
 from services.initial_balance_service import InitialBalanceService
 from services.momentum_service import MomentumService
+from services.oportunidad_15m_service import Oportunidad15mService
 from services.precio_service import PrecioService
 from services.screener_15m_service import Screener15mService
-from services.sector_15m_service import Sector15mService
 from services.score_service import ScoreService
+from services.sector_15m_service import Sector15mService
 from services.session_service import SessionService
+from services.tendencia_15m_service import Tendencia15mService
+from services.vwap_ib_service import VwapIbService
 
 
 @dataclass
@@ -63,6 +68,9 @@ class Container:
     momentum_service: Optional[MomentumService] = None
     heatmap_service: Optional[HeatmapService] = None
     indicator_service: Optional[IndicatorService] = None
+    oportunidad_15m_service: Optional[Oportunidad15mService] = None
+    bollinger_15m_service: Optional[Bollinger15mService] = None
+    tendencia_15m_service: Optional[Tendencia15mService] = None
     precio_service: Optional[PrecioService] = None
     event_service: Optional[EventService] = None
     session_service: Optional[SessionService] = None
@@ -73,6 +81,8 @@ class Container:
     initial_balance_service: Optional[InitialBalanceService] = None
     sector_15m_service: Optional[Sector15mService] = None
     divergencia_service: Optional[DivergenciaService] = None
+    divergencia_5m_service: Optional[Divergencia5mService] = None
+    vwap_ib_service: Optional[VwapIbService] = None
 
     name: str = field(default="container")
 
@@ -112,6 +122,15 @@ class Container:
         self.indicator_service = IndicatorService(
             self.latest_tick_repo, self.indicator_repo, self.settings
         )
+        self.oportunidad_15m_service = Oportunidad15mService(
+            self.bar_repo, self.latest_tick_repo, self.settings
+        )
+        self.bollinger_15m_service = Bollinger15mService(
+            self.bar_repo, self.latest_tick_repo, self.settings
+        )
+        self.tendencia_15m_service = Tendencia15mService(
+            self.bollinger_15m_service, self.latest_tick_repo, self.settings
+        )
         self.precio_service = PrecioService(
             self.series_repo, self.score_service, self.settings
         )
@@ -140,6 +159,12 @@ class Container:
             self.screener_15m_service, self.latest_tick_repo, self.settings
         )
         self.divergencia_service = DivergenciaService(self.bar_repo, self.settings)
+        self.divergencia_5m_service = Divergencia5mService(
+            self.bar_repo, self.latest_tick_repo, self.settings
+        )
+        self.vwap_ib_service = VwapIbService(
+            self.bar_repo, self.latest_tick_repo, self.settings
+        )
 
     # ── utilidades ──────────────────────────────────────────────────────────
     def logger(self, name: str) -> logging.Logger:

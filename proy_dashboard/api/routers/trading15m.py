@@ -32,3 +32,15 @@ def screener_15m(container: Container = Depends(get_container)) -> dict:
 def confluencia(container: Container = Depends(get_container)) -> dict:
     filas = container.confluencia_service.scan()
     return {"n": len(filas), "filas": filas}
+
+
+@router.get("/oportunidades")
+def oportunidades_15m(container: Container = Depends(get_container)) -> dict:
+    filas = container.oportunidad_15m_service.scan()
+    return {"n": len(filas), "filas": filas}
+
+
+@router.get("/bollinger")
+def bollinger_15m(container: Container = Depends(get_container)) -> dict:
+    filas = container.bollinger_15m_service.scan()
+    return {"n": len(filas), "filas": filas}

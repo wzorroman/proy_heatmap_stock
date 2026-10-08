@@ -220,7 +220,16 @@ def test_eventos_del_dia_ventana_utc_desde_medianoche_local(
 def test_eventos_del_dia_cambia_de_ventana_con_la_zona(
     monkeypatch, clean_env, empty_env_file, config_file
 ):
-    """NY y Lima definen días distintos: la ventana UTC se desplaza 1 h."""
+    """NY y Lima definen días distintos: la ventana UTC se desplaza 1 h.
+
+    Se fija `now_utc` para que ambas zonas caigan en el mismo día local; de lo
+    contrario, entre 04:00–05:00 UTC NY ya cambió de fecha y Lima no, y la
+    diferencia sería de −23 h (test dependiente del reloj).
+    """
+    monkeypatch.setattr(
+        "services.event_service.now_utc",
+        lambda: datetime(2026, 9, 30, 15, 0, tzinfo=UTC),
+    )
     repo_ny = _CapturingEventsRepo()
     monkeypatch.setenv("APP_TIMEZONE", "America/New_York")
     EventService(repo_ny, _settings(clean_env, empty_env_file, config_file)).eventos_del_dia()

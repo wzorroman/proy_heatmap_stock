@@ -1,5 +1,5 @@
 <article class="card card-trading">
-  <h2>Rango inicial — por acción <span class="ib-time">09:30–10:00 NY</span></h2>
+  <h2>{% if chart_code('ib_acciones') %}<span class="chart-code">{{ chart_code('ib_acciones') }}</span>{% endif %}Rango inicial — por acción <span class="ib-time">09:30–10:00 NY</span></h2>
   <p class="nota">{{ n_rupturas }} rupturas de {{ total }} evaluadas · ventana de {{ ib_minutos }} min</p>
   <div class="screener-table">
     <table class="tabla">

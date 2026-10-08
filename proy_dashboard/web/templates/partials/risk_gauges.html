@@ -1,5 +1,5 @@
 <article class="card" style="--panel-accent: var(--rojo);">
-  <h2 class="tinted">Termómetro de Riesgo</h2>
+  <h2 class="tinted">{% if chart_code('riesgo_gauges') %}<span class="chart-code">{{ chart_code('riesgo_gauges') }}</span>{% endif %}Termómetro de Riesgo</h2>
   <p class="nota">provisional: sin percentil 60d · nivel = (10 − norm_dir) · umbrales 40/60</p>
   {% for g in gauges %}
   <div class="gauge-row">

@@ -1,5 +1,5 @@
 <article class="card">
-  <h2>Score de mercado</h2>
+  <h2>{% if chart_code('header') %}<span class="chart-code">{{ chart_code('header') }}</span>{% endif %}Score de mercado</h2>
   <div class="grid-2">
     <div>
       <div id="chart-header" class="chart" style="height: 180px;"></div>

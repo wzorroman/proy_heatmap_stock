@@ -1,0 +1,11 @@
+{
+  "meta": { "calendar": { "codigo": "L1", "titulo": "Calendario de hoy" } },
+  "events": {
+    "importance_min": 0,
+    "today_country": "ALL",
+    "today_importance_level": 1,
+    "default_country": "ALL",
+    "lookback_hours": 24,
+    "lookahead_hours": 72
+  }
+}

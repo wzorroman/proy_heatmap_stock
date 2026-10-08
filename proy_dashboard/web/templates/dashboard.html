@@ -56,19 +56,40 @@
     <article class="card"><p class="muted">Cargando mapa de calor 15m…</p></article>
   </div>
 
-  <div class="cell" hx-get="/partials/momentum" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
-  <div class="cell" hx-get="/partials/change_rsi" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
+  <div class="cell tres fill" hx-get="/partials/momentum" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
+  <div class="cell cuarto fill" hx-get="/partials/change_rsi" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
+  {# H1 junto a G2, en las 5 columnas libres (3 + 4 + 5 = 12) #}
+  <div class="cell cinco fill" hx-get="/partials/rsi_limites" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
 
 
   {# RSI (top) eliminado (duplica info del scatter RSI top-cap).
   <div class="cell" hx-get="/partials/indicators" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
   #}
 
-  <div class="cell fill" hx-get="/partials/rsi_limites" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
   <div class="cell fill" hx-get="/partials/multiframe" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
 
-  <div class="cell" hx-get="/partials/volume" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
-  <div class="cell" hx-get="/partials/range52w" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
+  {# Fila I (Anomalía de volumen + Posición rango 52s) eliminada — sin utilidad para 5-15m #}
+
+  {# Fila J (continuación, 4/12 cada uno): Momentum · VWAP+IB · Confluencia+Vol #}
+  <div class="cell cuarto row-start" hx-get="/partials/oportunidad_15m" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML">
+    <article class="card"><p class="muted">Cargando J1 — Oportunidades Momentum…</p></article>
+  </div>
+  <div class="cell cuarto" hx-get="/partials/vwap_ib" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML">
+    <article class="card"><p class="muted">Cargando J2 — VWAP + IB…</p></article>
+  </div>
+  <div class="cell cuarto" hx-get="/partials/confluencia_fuerte" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML">
+    <article class="card"><p class="muted">Cargando J3 — Confluencia + Vol…</p></article>
+  </div>
+  {# Fila K1 / K2 / K3 — 3 cards de 4/12 (misma fila) #}
+  <div class="cell cuarto row-start" hx-get="/partials/bollinger_scatter" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML">
+    <article class="card"><p class="muted">Cargando K1 — Reversión Bollinger…</p></article>
+  </div>
+  <div class="cell cuarto" hx-get="/partials/tendencia_15m" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML">
+    <article class="card"><p class="muted">Cargando K2 — Tendencias en Marcha…</p></article>
+  </div>
+  <div class="cell cuarto" hx-get="/partials/divergencia_5m" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML">
+    <article class="card"><p class="muted">Cargando K3 — Divergencia 5m…</p></article>
+  </div>
 
   <div class="cell calendar" id="calendar-card"
        hx-get="/partials/calendar"

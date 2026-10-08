@@ -1,6 +1,7 @@
 <article class="card">
   <div class="ts-head">
     <h2>
+      {% if chart_code('tabla_sector') %}<span class="chart-code">{{ chart_code('tabla_sector') }}</span>{% endif %}
       {% if q %}Búsqueda: “{{ q }}”{% else %}Stocks por sector — {{ sector_actual }}{% endif %}
     </h2>
     <div class="ts-filters">

@@ -1,0 +1,32 @@
+{
+  "meta": {
+    "tendencia_15m": {
+      "codigo": "K2",
+      "titulo": "Tendencias en Marcha (ADX 15m)",
+      "ayuda": [
+        "Mapa general — Tendencias en Marcha (ADX 15m)",
+        "Eje X = posición en banda (σ) · Eje Y = ADX 15m",
+        "",
+        "                        K2 · ADX 15m",
+        "               ┌────────────────────┬───────────────────────────┐",
+        "               │  RANGO (ADX < 25)  │  TENDENCIA (ADX ≥ 25)     │",
+        "   ┌───────────┼────────────────────┼───────────────────────────┤",
+        "   │ K1 CORTO  │  reversión ✓       │  dir bajista → corto ✓    │",
+        "   │ (banda sup)│                   │  dir alcista → band walk ⚠│",
+        "   ├───────────┼────────────────────┼───────────────────────────┤",
+        "   │ K1 LARGO  │  reversión ✓       │  dir alcista → largo ✓    │",
+        "   │ (banda inf)│                   │  dir bajista → band walk ⚠│",
+        "   └───────────┴────────────────────┴───────────────────────────┘",
+        "",
+        "   verde = LARGO (rebote) · rojo = CORTO (rechazo) ",
+        "   || ADX ≥ 25 = tendencia",
+        "   || ADX ≥ 25 = tendencia extremo + rango = reversión",
+        "   || extremo + tendencia a favor = continuación"
+      ]
+    }
+  },
+  "tendencia": {
+    "adx_min": 25,
+    "max": 20
+  }
+}

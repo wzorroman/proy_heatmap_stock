@@ -1,0 +1,19 @@
+{
+  "meta": { "precios": { "codigo": "B1", "titulo": "Precios QQQ / SPY / IWM / ORO" } },
+  "precio": {
+    "horas": 48,
+    "escala": {
+      "adx_max": 50,
+      "rsi_zonas": [30, 70],
+      "cruce_max_pct": 0.5,
+      "marcar_precio_en_sma": true,
+      "rango_ventana": true
+    },
+    "tarjetas": [
+      { "clave": "qqq", "titulo": "QQQ", "subtitulo": "(NASDAQ-100)", "icono": "📈", "symbol": "NASDAQ:QQQ" },
+      { "clave": "spy", "titulo": "SPY", "subtitulo": "(S&P 500)", "icono": "📈", "symbol": "AMEX:SPY" },
+      { "clave": "iwm", "titulo": "IWM", "subtitulo": "(Russell 2000)", "icono": "🏭", "symbol": "AMEX:IWM" },
+      { "clave": "oro", "titulo": "ORO", "subtitulo": "(XAUUSD)", "icono": "🥇", "icono_url": "/static/iconos_mercado/oro_lingote.svg", "symbol": "OANDA:XAUUSD" }
+    ]
+  }
+}

@@ -1,5 +1,5 @@
 <article class="card">
-  <h2>{{ titulo }}</h2>
+  <h2>{% if chart_code('score_15m') %}<span class="chart-code">{{ chart_code('score_15m') }}</span>{% endif %}{{ titulo }}</h2>
   <div id="{{ chart_id }}" class="chart" style="height: {{ altura }}px;"></div>
   <div class="score-interp">
     <div class="score-interp-head">

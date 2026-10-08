@@ -1,0 +1,9 @@
+{
+  "meta": { "divergencia": { "codigo": "D3", "titulo": "Divergencia precio / RSI 15m" } },
+  "trading_15m": {
+    "div_horas": 48,
+    "div_pivote_k": 2,
+    "div_rsi_min": 1.5,
+    "div_max": 15
+  }
+}

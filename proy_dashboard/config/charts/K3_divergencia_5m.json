@@ -1,0 +1,35 @@
+{
+  "meta": {
+    "divergencia_5m": {
+      "codigo": "K3",
+      "titulo": "Divergencia Precio / RSI",
+      "tf": "5m",
+      "ayuda": [
+        "Mapa general — Divergencia Precio / RSI 5m",
+        "Eje X = RSI en pivote inicial · Eje Y = RSI en pivote final",
+        "",
+        "                   RSI fin",
+        "                     ▲",
+        "   BAJISTA desde     │           ●   (RSI alto → sobrecompra)",
+        "   sobrecompra       │         ╱     precio máx ↑ pero RSI ↓",
+        "   (fuerte)          │       ╱",
+        "                     │     ╱  diagonal y = x",
+        "   ALCISTA desde     │   ╱",
+        "   sobreventa     ●  │ ╱        precio mín ↓ pero RSI ↑",
+        "   (fuerte)          └────────────────────► RSI ini",
+        "",
+        "   ● verde = ALCISTA · ● rojo = BAJISTA",
+        "   - lejos de y = x = señal fuerte ",
+        "   - anillo dorado = confluencia K1+K2+K3"
+      ]
+    }
+  },
+  "divergencia_5m": {
+    "ventana_horas": 24,
+    "pivote_k": 2,
+    "rsi_min": 2.0,
+    "min_sep": 5,
+    "max": 12,
+    "rsi_periodo": 14
+  }
+}

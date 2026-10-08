@@ -164,8 +164,9 @@ CONFIG_ACTIVOS = {
         "XOM": {"primario": "NYSE:XOM", "respaldo": "NYSE:XOM"},
     },
     "TELECOM_MEDIA": {
-        "DIS": {"primario": "NYSE:DIS", "respaldo": "NYSE:DIS"},
-        "VZ":  {"primario": "NYSE:VZ",  "respaldo": "NYSE:VZ"},
+        "DIS":  {"primario": "NYSE:DIS",  "respaldo": "NYSE:DIS"},
+        "VZ":   {"primario": "NYSE:VZ",   "respaldo": "NYSE:VZ"},
+        "SPCX": {"primario": "NASDAQ:SPCX", "respaldo": "NASDAQ:SPCX"},
     },
     "TECNOLOGIA_GIGANTES": {
         "AAPL":  {"primario": "NASDAQ:AAPL",  "respaldo": "NASDAQ:AAPL"},
@@ -188,6 +189,7 @@ CONFIG_ACTIVOS = {
         "SMCI": {"primario": "NASDAQ:SMCI", "respaldo": "NASDAQ:SMCI"},
         "TER":  {"primario": "NASDAQ:TER",  "respaldo": "NASDAQ:TER"},
         "TXN":  {"primario": "NASDAQ:TXN",  "respaldo": "NASDAQ:TXN"},
+        "SKHY": {"primario": "NASDAQ:SKHY", "respaldo": "NASDAQ:SKHY"},
     },
     "SOFTWARE_SAAS": {
         "ADSK": {"primario": "NASDAQ:ADSK", "respaldo": "NASDAQ:ADSK"},

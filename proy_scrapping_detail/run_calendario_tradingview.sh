@@ -139,6 +139,25 @@ else:
     fi
 }
 
+fix_permissions_calendario() {
+    # Si un proceso root dejó el CSV/checkpoint con dueño root, el cron como
+    # appuser falla con PermissionError al intentar hacer overwrite. Normalizar
+    # la propiedad del árbol del calendario antes de la captura.
+    local CALENDARIO_DIR="$CALENDARIO_DATA_DIR/calendario_economico"
+    local EVENTOS_FILE="$CALENDARIO_DIR/eventos_calendario.csv"
+    local CHECKPOINT_FILE="$CALENDARIO_DIR/checkpoint.json"
+
+    if [ "$(id -un)" = "appuser" ] && [ -d "$CALENDARIO_DIR" ]; then
+        if [ -f "$EVENTOS_FILE" ] || [ -f "$CHECKPOINT_FILE" ]; then
+            if [ ! -w "$EVENTOS_FILE" ] || [ ! -w "$CHECKPOINT_FILE" ]; then
+                log "🔐 Corrigiendo permisos del calendario para appuser..."
+                chown -R appuser:appuser "$CALENDARIO_DIR" 2>/dev/null || true
+                chmod -R u+rwX,go+rX "$CALENDARIO_DIR" 2>/dev/null || true
+            fi
+        fi
+    fi
+}
+
 check_directorio_calendario() {
     # Raíz vía FILES_OUTPUT_CALENDAR (ver init_rutas)
     local CALENDARIO_DIR="$CALENDARIO_DATA_DIR/calendario_economico"
@@ -152,6 +171,8 @@ check_directorio_calendario() {
         mkdir -p "$CALENDARIO_DIR/logs"
         log "📁 Creando directorio de logs del calendario"
     fi
+
+    fix_permissions_calendario
 
     log "✅ Directorios del calendario verificados ($CALENDARIO_DIR)"
 }
