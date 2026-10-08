@@ -1,5 +1,5 @@
 <article class="card card-trading">
-  <h2>{% if chart_code('oportunidad_15m') %}<span class="chart-code">{{ chart_code('oportunidad_15m') }}</span>{% endif %}Oportunidades Momentum <span class="ib-time">15m</span></h2>
+  <h2>{% if chart_code('oportunidad_15m') %}<span class="chart-code">{{ chart_code('oportunidad_15m') }}</span>{% endif %}Oportunidades Momentum <span class="ib-time">15m</span>{% if ayuda %}<span class="chart-help" tabindex="0" role="button" aria-label="Ver referencia">(+)</span><span class="chart-help-pop"><pre>{{ ayuda }}</pre></span>{% endif %}</h2>
   <p class="nota">{{ filas|length }} oportunidades · RSI 50-70 · ADX ≥25 · Vol ≥1.2x · > VWAP</p>
   <div class="op-list">
     {% for d in filas %}
@@ -17,17 +17,19 @@
           {{ d.ticker }}
           {% if d.confluencia %}<span class="conf-star" title="Confluencia fila J ({{ d.n_paneles }} paneles)">★</span>{% endif %}
         </span>
-        <div class="op-head-right">
-          <span class="op-tag op-tag-close"><b>Close</b> {{ "%.2f"|format(d.close) }}</span>
-          <span class="op-tag"><b>RSI</b> {{ "%.1f"|format(d.rsi_15) }}</span>
-          <span class="zona zona-sm zona-COMPRAR">LARGO</span>
-        </div>
+        <span class="zona zona-tiny zona-COMPRAR">LARGO</span>
       </div>
-      <div class="op-tags">
-        <span class="op-tag"><b>Chg</b> <span class="pct {{ 'pos' if d.change_pct >= 0 else 'neg' }}">{{ "%+.2f"|format(d.change_pct) }}%</span></span>
-        <span class="op-tag"><b>ADX</b> {{ "%.1f"|format(d.adx_15) }}</span>
-        <span class="op-tag"><b>Vol</b> {{ "%.2f"|format(d.vol_ratio) }}x</span>
-        <span class="op-tag"><b>VWAP</b> +{{ "%.2f"|format(d.dist_vwap) }}%</span>
+      <div class="op-impulse">
+        <span class="op-track">
+          <span class="op-fill {{ d.impulso_clase }}" style="width: {{ d.impulso_pct }}%"></span>
+          <span class="op-mark" style="left: {{ marcas.medio }}%"></span>
+          <span class="op-mark" style="left: {{ marcas.alto }}%"></span>
+          <span class="op-track-label">RSI {{ "%.0f"|format(d.rsi_15) }}</span>
+        </span>
+        <span class="pct {{ 'pos' if d.change_pct >= 0 else 'neg' }}">{{ "%+.2f"|format(d.change_pct) }}%</span>
+      </div>
+      <div class="op-meta">
+        ADX {{ "%.0f"|format(d.adx_15) }} · Vol {{ "%.2f"|format(d.vol_ratio) }}x · VWAP +{{ "%.2f"|format(d.dist_vwap) }}%
       </div>
     </div>
     {% endfor %}

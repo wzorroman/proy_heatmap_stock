@@ -11,7 +11,7 @@
     {% endfor %}
   </div>
   {% endif %}
-  <div id="{{ chart_id }}" class="chart"{% if not fill %} style="height: {{ altura|default(280) }}px;"{% endif %}></div>
+  <div id="{{ chart_id }}" class="chart"{% if not fill or ancho %} style="{% if not fill %}height: {{ altura|default(280) }}px;{% endif %}{% if ancho %}width: {{ ancho }};{% endif %}"{% endif %}></div>
   {% if leyenda_nota %}<p class="leyenda-nota">{{ leyenda_nota|safe }}</p>{% endif %}
   <script>
     (function () {

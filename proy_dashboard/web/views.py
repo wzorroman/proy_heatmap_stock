@@ -70,7 +70,7 @@ def _fmt_hora_lima(iso: str) -> str:
     return local.strftime("%d/%m %H:%M")
 
 
-def _card(request: Request, titulo, chart_id, option, *, nota=None, altura=280, accent=None, fill=False, codigo=None, leyenda=None, leyenda_nota=None, ayuda=None, tf=None):
+def _card(request: Request, titulo, chart_id, option, *, nota=None, altura=280, accent=None, fill=False, codigo=None, leyenda=None, leyenda_nota=None, ayuda=None, tf=None, ancho=None):
     return templates.TemplateResponse(
         request,
         "partials/card_chart.html",
@@ -87,6 +87,7 @@ def _card(request: Request, titulo, chart_id, option, *, nota=None, altura=280, 
             "leyenda_nota": leyenda_nota,
             "ayuda": ayuda,
             "tf": tf,
+            "ancho": ancho,
         },
     )
 
@@ -422,28 +423,22 @@ def score_history(request: Request):
     )
 
 
-@router.get("/multiframe", response_class=HTMLResponse)
-def multiframe(request: Request):
-    c = _container(request)
-    # Selección RSI 1D top con 5m y 15m alineados: ambos <40 o ambos >60.
+def _multiframe_data(c):
+    """Datos de Multi-TF (RSI 5m vs 15m): (categorias, series, op_alto, op_bajo).
+
+    Selección RSI 1D top con 5m y 15m alineados: ambos < op_bajo o ambos > op_alto.
+    """
     op_alto = float(c.settings.business("rsi", "oportunidad_alto", default=60))
     op_bajo = float(c.settings.business("rsi", "oportunidad_bajo", default=40))
     puntos = c.heatmap_service.top_equity_rsi()
     simbolos = [p["symbol"] for p in puntos]
     rsi1d = {p["symbol"]: float(p["rsi"]) for p in puntos if p.get("rsi") is not None}
-    rsi5 = {
-        d["symbol"]: d["valor"]
-        for d in c.indicator_service.por_indicador("rsi", "5", n=10000)
-    }
-    rsi15 = {
-        d["symbol"]: d["valor"]
-        for d in c.indicator_service.por_indicador("rsi", "15", n=10000)
-    }
+    rsi5 = {d["symbol"]: d["valor"] for d in c.indicator_service.por_indicador("rsi", "5", n=10000)}
+    rsi15 = {d["symbol"]: d["valor"] for d in c.indicator_service.por_indicador("rsi", "15", n=10000)}
     categorias = [
         s
         for s in simbolos
-        if s in rsi5
-        and s in rsi15
+        if s in rsi5 and s in rsi15
         and (
             (rsi5[s] < op_bajo and rsi15[s] < op_bajo)
             or (rsi5[s] > op_alto and rsi15[s] > op_alto)
@@ -454,8 +449,15 @@ def multiframe(request: Request):
         "RSI 5m": [round(rsi5[s], 1) for s in categorias],
         "RSI 15m": [round(rsi15[s], 1) for s in categorias],
     }
+    return categorias, series, op_alto, op_bajo
+
+
+@router.get("/multiframe", response_class=HTMLResponse)
+def multiframe(request: Request):
+    c = _container(request)
+    categorias, series, op_alto, op_bajo = _multiframe_data(c)
     return _card(
-        request, "Multi-TF (RSI 5m vs 15m)", "chart-multiframe",
+        request, c.settings.chart_title("multiframe", default="Multi-TF (RSI 5m vs 15m)"), "chart-multiframe",
         charts.multiframe_option(series, categorias=categorias),
         nota=(
             f'{len(categorias)} acciones · 5m y 15m ambos '
@@ -465,6 +467,29 @@ def multiframe(request: Request):
         accent=charts.AMARILLO,
         fill=True,
         codigo=c.settings.chart_code("multiframe"),
+    )
+
+
+@router.get("/multiframe_j4", response_class=HTMLResponse)
+def multiframe_j4(request: Request):
+    """Prueba: duplicado de H2 (Multi-TF) con código J4, para el espacio libre de la fila J."""
+    c = _container(request)
+    categorias, series, op_alto, op_bajo = _multiframe_data(c)
+    logos = {s: logo_url(s) for s in categorias}
+    tickers = {s: s.split(":")[-1] for s in categorias}
+    return _card(
+        request, c.settings.chart_title("multiframe_j4", default="Multi-TF (RSI 5m vs 15m)"), "chart-multiframe-j4",
+        charts.multiframe_option(series, categorias=categorias, compact=True,
+                                 logos=logos, tickers=tickers),
+        nota=(
+            f'{len(categorias)} acciones · 5m y 15m ambos '
+            f'<span class="pos">&lt;{int(op_bajo)}</span> o '
+            f'<span class="neg">&gt;{int(op_alto)}</span>'
+        ),
+        accent=charts.AMARILLO,
+        fill=True,
+        ancho="98%",
+        codigo=c.settings.chart_code("multiframe_j4"),
     )
 
 
@@ -786,10 +811,26 @@ def oportunidad_15m(request: Request):
         f["logo"] = logo_url(f["symbol"])
         f["n_paneles"] = cnt.get(f["symbol"], 0)
         f["confluencia"] = f["n_paneles"] >= 2
+        # Barra de impulso: RSI en la escala 50→100 (largo) y color por intensidad.
+        rsi = float(f.get("rsi_15") or 0)
+        f["impulso_pct"] = round(max(0.0, min(100.0, (rsi - 50.0) / 50.0 * 100.0)), 1)
+        f["impulso_clase"] = (
+            "op-fill-alto" if rsi >= 70 else ("op-fill-medio" if rsi >= 60 else "op-fill-bajo")
+        )
+    # Posiciones (%) de los cortes de color sobre la escala 50→100: RSI 60 y RSI 70.
+    marcas = {
+        "medio": round((60.0 - 50.0) / 50.0 * 100.0, 1),
+        "alto": round((70.0 - 50.0) / 50.0 * 100.0, 1),
+    }
     return templates.TemplateResponse(
         request,
         "partials/oportunidad_15m.html",
-        {"filas": filas, "total": len(filas)},
+        {
+            "filas": filas,
+            "total": len(filas),
+            "marcas": marcas,
+            "ayuda": c.settings.chart_help("oportunidad_15m"),
+        },
     )
 
 

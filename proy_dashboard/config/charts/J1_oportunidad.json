@@ -1,5 +1,31 @@
 {
-  "meta": { "oportunidad_15m": { "codigo": "J1", "titulo": "Oportunidades Momentum 15m" } },
+  "meta": {
+    "oportunidad_15m": {
+      "codigo": "J1",
+      "titulo": "Oportunidades Momentum 15m",
+      "ayuda": [
+        "Leyenda — Oportunidades Momentum (15m)",
+        "Filtro: RSI 50-70 · ADX ≥25 · Vol ≥1.2x · >VWAP · barra alcista",
+        "",
+        "Barra de impulso (escala RSI 50 → 100):",
+        "  ██ verde = RSI < 60   impulso fresco con recorrido",
+        "  ██ ámbar = RSI 60-70  calentando (zona de oportunidad)",
+        "  ██ rojo  = RSI ≥ 70   extendido / sobrecompra (raro por el filtro)",
+        "  │        = marcas verticales en RSI 60 y 70 (cortes de color)",
+        "  texto dentro de la barra = valor del RSI",
+        "",
+        "Cada fila:",
+        "  [logo] TICKER ★  LARGO     ★ = confluencia de la fila J",
+        "  %Cambio (verde/rojo) · ADX · Vol · VWAP",
+        "  %Cambio = variación del precio ",
+        "  ADX = fuerza de tendencia",
+        "  Vol = vol relativo · VWAP = distancia al VWAP",
+        "",
+        "Orden: por score (vol ×2 + ADX/5 + VWAP + % + RSI cercano a 60)",
+        "Máximo: 4 filas (oportunidad_max) · clic en fila → velas 15m"
+      ]
+    }
+  },
   "trading_15m": {
     "oportunidad_horas": 48,
     "oportunidad_max": 4,

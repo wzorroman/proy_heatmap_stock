@@ -84,6 +84,7 @@ orden  = score descendente · corte = 4 (oportunidad_max)
 - Servicio: `services/oportunidad_15m_service.py`
 - Vista: `web/views.py::oportunidad_15m` · Template: `partials/oportunidad_15m.html`
 - Datos: `fact_market_bar_15m` (close, volume, vwap), `latest_market_tick` (rsi_15, adx_15).
+- Documento detallado: [`dashboard_explicacion_graph-J1_oportunidad_momentum.md`](dashboard_explicacion_graph-J1_oportunidad_momentum.md)
 
 ---
 

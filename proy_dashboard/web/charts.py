@@ -484,13 +484,21 @@ def line_option(
     return op
 
 
-def multiframe_option(series: dict, *, categorias) -> dict:
+def multiframe_option(series: dict, *, categorias, compact: bool = False,
+                      logos=None, tickers=None) -> dict:
     """Multi-TF estilo `bar-rich-text`: barras agrupadas con etiquetas ricas.
 
     Basado en el ejemplo de ECharts "Weather Statistics" (bar-rich-text):
     barras horizontales por activo con eje categórico estilizado, etiquetas de
     texto enriquecido y líneas guía en los límites del RSI (30 / 70).
+
+    `compact=True` reduce los márgenes del grid al mínimo (para cards angostas):
+    el eje de barras ocupa casi todo el canvas, oculta el eje de símbolos y deja
+    el valor dentro de la barra (en negro). Con `logos`/`tickers` añade el
+    `[logo][símbolo]` DELANTE de las barras, alineado a la derecha.
     """
+    logos = logos or {}
+    tickers = tickers or {}
     op = _base()
     op["tooltip"] = {"trigger": "axis", "axisPointer": {"type": "shadow"}}
     op["legend"] = {
@@ -498,7 +506,10 @@ def multiframe_option(series: dict, *, categorias) -> dict:
         "textStyle": {"color": MUTED, "fontSize": 12},
         "top": 0,
     }
-    op["grid"] = {"left": 132, "right": 48, "top": 34, "bottom": 14}
+    if compact:
+        op["grid"] = {"left": 4, "right": 4, "top": 22, "bottom": 16}
+    else:
+        op["grid"] = {"left": 132, "right": 48, "top": 34, "bottom": 14}
     op["xAxis"] = {
         "type": "value",
         "min": 0,
@@ -507,42 +518,50 @@ def multiframe_option(series: dict, *, categorias) -> dict:
         "axisLine": {"lineStyle": {"color": BORDE}},
         "splitLine": {"lineStyle": {"color": "#1e252e"}},
     }
+    etiqueta_eje = {"show": False} if compact else {
+        "margin": 12,
+        "formatter": "{sym|{value}}",
+        "rich": {
+            "sym": {
+                "fontSize": 13,
+                "fontWeight": "bold",
+                "color": "#dfe6ee",
+                "align": "right",
+                "lineHeight": 20,
+            }
+        },
+    }
     op["yAxis"] = {
         "type": "category",
         "inverse": True,
         "data": categorias,
-        "axisLabel": {
-            "margin": 12,
-            "formatter": "{sym|{value}}",
-            "rich": {
-                "sym": {
-                    "fontSize": 13,
-                    "fontWeight": "bold",
-                    "color": "#dfe6ee",
-                    "align": "right",
-                    "lineHeight": 20,
-                }
-            },
-        },
+        "axisLabel": etiqueta_eje,
         "axisLine": {"lineStyle": {"color": BORDE}},
     }
 
     paleta = [AZUL, AMARILLO]
+    color_valor = "#0b0f14" if compact else MUTED
     salida = []
     for i, (nombre, valores) in enumerate(series.items()):
         serie = {
             "type": "bar",
             "name": nombre,
             "data": valores,
-            "barWidth": "30%",
+            "barWidth": "16%" if compact else "30%",
             "itemStyle": {"color": paleta[i % len(paleta)], "borderRadius": [0, 4, 4, 0]},
             "label": {
-                "show": True,
-                "position": "right",
+                # En compacto el valor va solo en el popup (tooltip) → gráfico más limpio.
+                "show": not compact,
+                "position": "insideRight" if compact else "right",
                 "formatter": "{v|{c}}",
-                "rich": {"v": {"color": MUTED, "fontSize": 11, "fontWeight": "bold"}},
+                "rich": {"v": {"color": color_valor, "fontSize": 11, "fontWeight": "bold"}},
             },
         }
+        if compact:
+            # Separa un poco más la barra celeste (5m) de la ámbar (15m) y reparte
+            # las filas de forma uniforme en la altura del gráfico.
+            serie["barGap"] = "55%"
+            serie["barCategoryGap"] = "30%"
         if i == 0:
             serie["markLine"] = {
                 "silent": True,
@@ -556,6 +575,34 @@ def multiframe_option(series: dict, *, categorias) -> dict:
                 ],
             }
         salida.append(serie)
+
+    # Marca de agua DELANTE de las barras: [logo][símbolo] a la derecha de cada fila.
+    if compact and categorias:
+        rich = {
+            "tick": {"color": "#f2f7ff", "fontSize": 11, "fontWeight": "bold",
+                     "align": "left", "verticalAlign": "middle",
+                     "backgroundColor": "rgba(11, 15, 20, 0.62)", "borderRadius": 3,
+                     "padding": [2, 6, 2, 4]},
+        }
+        data_wm = []
+        for i, sym in enumerate(categorias):
+            url = logos.get(sym) or _PIXEL
+            rich[f"i{i}"] = {"backgroundColor": {"image": url, "width": 14, "height": 14},
+                             "width": 14, "height": 14, "align": "left", "verticalAlign": "middle"}
+            ticker_sym = tickers.get(sym) or sym.split(":")[-1]
+            data_wm.append({"value": [100, i],
+                            "label": {"formatter": f"{{i{i}| }}{{tick|{ticker_sym}}}"}})
+        salida.append({
+            "type": "scatter",
+            "symbol": "circle",
+            "symbolSize": 0,
+            "z": 10,
+            "silent": True,
+            "tooltip": {"show": False},
+            "data": data_wm,
+            "label": {"show": True, "position": "left", "rich": rich},
+        })
+
     op["series"] = salida
     return op
 
