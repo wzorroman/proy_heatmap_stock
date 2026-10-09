@@ -192,7 +192,7 @@ El texto de la leyenda se declara en `config/charts/J1_oportunidad.json` (`meta.
 | Vista / endpoint | `web/views.py::oportunidad_15m` (calcula `impulso_pct`, `impulso_clase`, `marcas`) |
 | Leyenda `(+)` | `Settings.chart_help("oportunidad_15m")` · popup `.chart-help` en `card_chart.html`/app.css |
 | Barras e indicadores 15m | `services/bar_15m_service.py` (`_vwap`, `_volume_ratio`) |
-| Config | `config/charts/J1_oportunidad.json` (`meta.oportunidad_15m.ayuda` + umbrales `trading_15m`) |
+| Config | `config/charts/J1_oportunidad.json` (`meta.oportunidad_15m.titulo`/`tf`/`ayuda` + umbrales `trading_15m`) |
 | Container | `core/container.py` (`oportunidad_15m_service`) |
 | Dashboard | `web/templates/dashboard.html` (`cell dos row-start`, fila J) |
 | Velas (clic) | `/partials/velas_15m?symbol=…` → `#trading-velas-card` |

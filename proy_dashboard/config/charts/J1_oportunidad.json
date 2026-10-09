@@ -2,9 +2,10 @@
   "meta": {
     "oportunidad_15m": {
       "codigo": "J1",
-      "titulo": "Oportunidades Momentum 15m",
+      "titulo": "Oport. Momentum",
+      "tf": "15m",
       "ayuda": [
-        "Leyenda — Oportunidades Momentum (15m)",
+        "Oportunidades Momentum (15m)",
         "Filtro: RSI 50-70 · ADX ≥25 · Vol ≥1.2x · >VWAP · barra alcista",
         "",
         "Barra de impulso (escala RSI 50 → 100):",

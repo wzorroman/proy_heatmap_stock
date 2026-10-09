@@ -426,13 +426,13 @@ def score_history(request: Request):
 def _multiframe_data(c):
     """Datos de Multi-TF (RSI 5m vs 15m): (categorias, series, op_alto, op_bajo).
 
-    Selección RSI 1D top con 5m y 15m alineados: ambos < op_bajo o ambos > op_alto.
+    Selección RSI 1D top con 5m y 15m alineados (ambos < op_bajo o ambos > op_alto),
+    ordenada por el RSI promedio mostrado (5m + 15m)/2, descendente.
     """
     op_alto = float(c.settings.business("rsi", "oportunidad_alto", default=60))
     op_bajo = float(c.settings.business("rsi", "oportunidad_bajo", default=40))
     puntos = c.heatmap_service.top_equity_rsi()
     simbolos = [p["symbol"] for p in puntos]
-    rsi1d = {p["symbol"]: float(p["rsi"]) for p in puntos if p.get("rsi") is not None}
     rsi5 = {d["symbol"]: d["valor"] for d in c.indicator_service.por_indicador("rsi", "5", n=10000)}
     rsi15 = {d["symbol"]: d["valor"] for d in c.indicator_service.por_indicador("rsi", "15", n=10000)}
     categorias = [
@@ -444,7 +444,7 @@ def _multiframe_data(c):
             or (rsi5[s] > op_alto and rsi15[s] > op_alto)
         )
     ]
-    categorias.sort(key=lambda s: rsi1d.get(s, 0.0), reverse=True)
+    categorias.sort(key=lambda s: (rsi5[s] + rsi15[s]) / 2.0, reverse=True)
     series = {
         "RSI 5m": [round(rsi5[s], 1) for s in categorias],
         "RSI 15m": [round(rsi15[s], 1) for s in categorias],
@@ -490,6 +490,7 @@ def multiframe_j4(request: Request):
         fill=True,
         ancho="98%",
         codigo=c.settings.chart_code("multiframe_j4"),
+        ayuda=c.settings.chart_help("multiframe_j4"),
     )
 
 
@@ -829,6 +830,8 @@ def oportunidad_15m(request: Request):
             "filas": filas,
             "total": len(filas),
             "marcas": marcas,
+            "titulo": c.settings.chart_title("oportunidad_15m"),
+            "tf": c.settings.chart_tf("oportunidad_15m"),
             "ayuda": c.settings.chart_help("oportunidad_15m"),
         },
     )

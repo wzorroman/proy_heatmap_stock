@@ -1,3 +1,26 @@
 {
-  "meta": { "multiframe_j4": { "codigo": "J4", "titulo": "Multi-TF (RSI 5m vs 15m)" } }
+  "meta": {
+    "multiframe_j4": {
+      "codigo": "J4",
+      "titulo": "Multi-TF (RSI 5m vs 15m)",
+      "ayuda": [
+        "Mapa general — Multi-TF (RSI 5m vs 15m)",
+        "Eje X = RSI (0-100) · azul = RSI 5m · ámbar = RSI 15m",
+        "",
+        "  RSI  0      30    40        60    70      100",
+        "       │       ┊     ┊         ┊     ┊        │",
+        " ABBV  ├──────────────────────▓▓▓▓▓▓▓▓▓▓▓▓▓▓",
+        "       ├──────────────────────▓▓▓▓▓▓▓▓▓▓▓▓",
+        " SHOP  ├─────▓▓▓▓▓▓▓▓▓▓▓▓░░",
+        "       ◄── BAJO (<40) ──┼── ALTO (>60) ──►",
+        "",
+        "  Selección: RSI 1D top (mayor capitalización)",
+        "  Filtro: RSI 5m y 15m ambos <40 o ambos >60",
+        "  Orden: promedio (5m+15m)/2 descendente",
+        "  5m más largo que 15m = impulso acelerando",
+        "  15m más largo que 5m = posible agotamiento",
+        "  ⚠ líneas guía del gráfico en 30/70; el filtro usa 40/60"
+      ]
+    }
+  }
 }
