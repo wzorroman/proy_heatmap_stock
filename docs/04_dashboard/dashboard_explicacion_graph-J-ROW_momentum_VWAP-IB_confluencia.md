@@ -14,7 +14,7 @@
 Es la fila de **continuación intradía**: busca activos que **se mueven a favor** (no reversión) y los confirma desde cuatro ángulos, de lo inmediato a lo amplio.
 
 ```
- [J1] Oportunidades Momentum 15m    →  ¿hay IMPULSO con volumen?        (lista)
+ [J1] Oportunidades Momentum 15m    →  ¿hay IMPULSO con volumen?         (lista)
  [J2] VWAP + Initial Balance (15m)  →  ¿rompió ESTRUCTURA y tiene flujo? (scatter)
  [J3] Confluencia Fuerte 5m/15m/1D  →  ¿está ALINEADO en 3 timeframes?   (cuadrícula)
  [J4] Multi-TF (RSI 5m vs 15m)      →  ¿coinciden 5m y 15m?              (barras)
@@ -325,13 +325,13 @@ SHOP  ├──────▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░     
 ## 5. Cómo se leen juntas (la fila J)
 
 ```
-┌──────────────┬──────────────┬───────────────┬──────────────┐
-│ J1 Momentum  │ J2 VWAP+IB   │ J3 Confluencia│ J4 Multi-TF  │
-│ "¿impulso?"  │ "¿estructura?"│ "¿calidad?"  │ "¿5m≈15m?"   │
-│ lista        │ scatter      │ cuadrícula    │ barras       │
-└──────┬───────┴──────┬───────┴──────┬────────┴──────┬───────┘
-       │              │              │               │
-   candidato  →   confirmación  →   filtro final  →  coherencia
+┌──────────────┬───────────────┬───────────────┬──────────────┐
+│ J1 Momentum  │ J2 VWAP+IB    │ J3 Confluencia│ J4 Multi-TF  │
+│ "¿impulso?"  │ "¿estructura?"│ "¿calidad?"   │ "¿5m≈15m?"   │
+│ lista        │ scatter       │ cuadrícula    │ barras       │
+└──────┬───────┴──────┬────────┴──────┬────────┴──────┬───────┘
+       │              │               │               │
+   candidato  →  confirmación  → filtro final  →  coherencia
 ```
 
 **Ejemplos de confluencia entre paneles (snapshot 2026-10-08):**

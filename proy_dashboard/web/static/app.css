@@ -36,6 +36,12 @@ body {
 }
 
 /* ── Barra superior ───────────────────────────────────────────────────────── */
+.site-head {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  backdrop-filter: blur(6px);
+}
 .topbar {
   display: flex;
   align-items: center;
@@ -44,10 +50,42 @@ body {
   padding: 14px 22px;
   background: linear-gradient(90deg, #10161d, #151d26 60%, #10161d);
   border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  backdrop-filter: blur(6px);
+  position: relative;
+}
+
+/* ── Pestañas de navegación ───────────────────────────────────────────────── */
+.tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  padding: 10px 22px 0;
+  background: rgba(11, 15, 20, 0.92);
+  border-bottom: 1px solid var(--border);
+}
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px 9px;
+  border: 1px solid transparent;
+  border-radius: 8px 8px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.15s, background-color 0.15s, border-color 0.15s;
+}
+.tab:hover {
+  color: var(--text);
+  background: var(--panel-alt);
+  border-color: var(--border);
+  border-bottom-color: transparent;
+}
+.tab.active {
+  color: var(--azul);
+  background: #121923;
+  border-color: var(--border);
+  border-bottom-color: #121923;
 }
 
 .brand {

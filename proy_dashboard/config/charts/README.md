@@ -38,8 +38,11 @@ la configuración única que consume `Settings.business(...)`.
 | A3 | riesgo_fx | `A3_riesgo_fx.json` |
 | A4 | score_15m | `A4_score_15m.json` |
 | A5 | health | `A5_health.json` |
-| B1 | precios | `B1_precios.json` |
-| B2 | score_history | `B2_score_history.json` |
+| B1 | precios — QQQ (NASDAQ-100) | `B1_precios.json` |
+| B2 | precios — SPY (S&P 500) | `B1_precios.json` ¹ |
+| B3 | precios — IWM (Russell 2000) | `B1_precios.json` ¹ |
+| B4 | precios — ORO (XAUUSD) | `B1_precios.json` ¹ |
+| BB2 | score_history | `BB2_score_history.json` |
 | C1 | sectores | `C1_sectores.json` |
 | C2 | sector_risk | `C2_sector_risk.json` |
 | D1 | alcistas | `D1_alcistas.json` |
@@ -63,6 +66,10 @@ la configuración única que consume `Settings.business(...)`.
 | K1 | bollinger_scatter | `K1_bollinger_scatter.json` |
 | L1 | calendar | `L1_calendar.json` |
 | M1 | tabla_sector | `M1_tabla_sector.json` |
+
+¹ La tarjeta `precios` agrupa **una mini-tarjeta por símbolo** (QQQ/SPY/IWM/ORO).
+   Cada símbolo lleva su **propio código** en `precio.tarjetas[].codigo` (B1, B2, B3, B4)
+   del mismo archivo `B1_precios.json`, visible en el título de cada mini-tarjeta.
 
 ## Uso en código
 

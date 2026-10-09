@@ -65,31 +65,39 @@ for _router in (health.router, score.router, momentum.router, heatmap.router,
     app.include_router(_router)
 
 
-@app.get("/", response_class=HTMLResponse)
-def index(request: Request):
+def _page_context(request: Request, active_tab: str) -> dict:
+    """Contexto base común a las páginas (título, zona horaria, auto-refresh, tab activa)."""
     container = request.app.state.container
     settings = container.settings
-    motivo = settings.business("data", "placeholder_msg", default="Histórico insuficiente.")
-    return templates.TemplateResponse(
-        request,
-        "dashboard.html",
-        {
-            "settings": settings,
-            "title": settings.business("app", "title", default="Radar Intermarket"),
-            "refresh_ms": settings.business("app", "htmx_refresh_ms", default=30000),
-            "version": settings.version,
-            # Zona de visualización (APP_TIMEZONE) para mostrarla en el subtítulo.
-            "timezone": settings.timezone,
-            "tz_label": tz_label(settings.timezone),
-            "fase": container.session_service.estado(),
-            "placeholders": [
-                ("SMA20/50 de precio", motivo),
-                ("Percentil 60d de riesgo", motivo),
-                ("Performance semanal", motivo),
-                ("Distribución histórica / backtest", motivo),
-            ],
-        },
-    )
+    return {
+        "settings": settings,
+        "title": settings.business("app", "title", default="Radar Intermarket"),
+        "refresh_ms": settings.business("app", "htmx_refresh_ms", default=30000),
+        "version": settings.version,
+        # Zona de visualización (APP_TIMEZONE) para mostrarla en el subtítulo.
+        "timezone": settings.timezone,
+        "tz_label": tz_label(settings.timezone),
+        "fase": container.session_service.estado(),
+        "active_tab": active_tab,
+    }
+
+
+@app.get("/", response_class=HTMLResponse)
+def index(request: Request):
+    context = _page_context(request, "dashboard")
+    context["placeholders"] = [
+        ("SMA20/50 de precio", context["settings"].business("data", "placeholder_msg", default="Histórico insuficiente.")),
+        ("Percentil 60d de riesgo", context["settings"].business("data", "placeholder_msg", default="Histórico insuficiente.")),
+        ("Performance semanal", context["settings"].business("data", "placeholder_msg", default="Histórico insuficiente.")),
+        ("Distribución histórica / backtest", context["settings"].business("data", "placeholder_msg", default="Histórico insuficiente.")),
+    ]
+    return templates.TemplateResponse(request, "dashboard.html", context)
+
+
+@app.get("/tmp1d", response_class=HTMLResponse)
+def tmp1d(request: Request):
+    """Pestaña 'Tmp 1D': aloja el gráfico B2 (Evolución del score de mercado)."""
+    return templates.TemplateResponse(request, "tmp1d.html", _page_context(request, "tmp1d"))
 
 
 def main() -> None:

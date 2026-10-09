@@ -10,10 +10,10 @@
       "rango_ventana": true
     },
     "tarjetas": [
-      { "clave": "qqq", "titulo": "QQQ", "subtitulo": "(NASDAQ-100)", "icono": "📈", "symbol": "NASDAQ:QQQ" },
-      { "clave": "spy", "titulo": "SPY", "subtitulo": "(S&P 500)", "icono": "📈", "symbol": "AMEX:SPY" },
-      { "clave": "iwm", "titulo": "IWM", "subtitulo": "(Russell 2000)", "icono": "🏭", "symbol": "AMEX:IWM" },
-      { "clave": "oro", "titulo": "ORO", "subtitulo": "(XAUUSD)", "icono": "🥇", "icono_url": "/static/iconos_mercado/oro_lingote.svg", "symbol": "OANDA:XAUUSD" }
+      { "codigo": "B1", "clave": "qqq", "titulo": "QQQ", "subtitulo": "(NASDAQ-100)", "icono": "📈", "symbol": "NASDAQ:QQQ" },
+      { "codigo": "B2", "clave": "spy", "titulo": "SPY", "subtitulo": "(S&P 500)", "icono": "📈", "symbol": "AMEX:SPY" },
+      { "codigo": "B3", "clave": "iwm", "titulo": "IWM", "subtitulo": "(Russell 2000)", "icono": "🏭", "symbol": "AMEX:IWM" },
+      { "codigo": "B4", "clave": "oro", "titulo": "ORO", "subtitulo": "(XAUUSD)", "icono": "🥇", "icono_url": "/static/iconos_mercado/oro_lingote.svg", "symbol": "OANDA:XAUUSD" }
     ]
   }
 }

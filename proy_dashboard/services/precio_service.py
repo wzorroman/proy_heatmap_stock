@@ -59,6 +59,7 @@ class PrecioService:
         rows = self.series_repo.fetch_serie(symbol, desde, limit=5000)
 
         base = {
+            "codigo": tarjeta.get("codigo"),
             "clave": tarjeta.get("clave"),
             "titulo": tarjeta.get("titulo", symbol),
             "subtitulo": tarjeta.get("subtitulo"),
@@ -122,6 +123,7 @@ class PrecioService:
         signal = "COMPRAR" if score >= 60 else ("VENDER" if score <= 40 else "NEUTRAL")
 
         return {
+            "codigo": tarjeta.get("codigo"),
             "clave": tarjeta.get("clave"),
             "titulo": tarjeta.get("titulo", symbol),
             "subtitulo": tarjeta.get("subtitulo"),

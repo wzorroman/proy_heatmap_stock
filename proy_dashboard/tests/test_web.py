@@ -125,6 +125,32 @@ def test_partial_precios_con_barras():
     assert r.text.count('class="metrica"') >= 6
     assert "SMA20 vs SMA50" in r.text
     assert "Rango 48h" in r.text
+    # Códigos únicos por símbolo: QQQ=B1 · SPY=B2 · IWM=B3 · ORO=B4
+    assert re.findall(r'class="chart-code">([^<]+)<', r.text) == ["B1", "B2", "B3", "B4"]
+
+
+def test_partial_score_history_usa_codigo_bb2():
+    with _client() as client:
+        r = client.get("/partials/score_history")
+
+    assert r.status_code == 200
+    assert 'class="chart-code">BB2<' in r.text
+    assert 'class="chart-code">B2<' not in r.text
+
+
+def test_tab_tmp1d_aloja_b2():
+    """La pestaña 'Tmp 1D' (/tmp1d) aloja B2; en el dashboard ya no está."""
+    with _client() as client:
+        tmp = client.get("/tmp1d")
+        dash = client.get("/").text
+
+    assert tmp.status_code == 200
+    assert 'hx-get="/partials/score_history"' in tmp.text
+    assert "Tmp 1D" in tmp.text
+    # navegación con la pestaña activa marcada
+    assert 'class="tab active"' in tmp.text
+    # B2 movido: ya no se carga desde el dashboard
+    assert 'hx-get="/partials/score_history"' not in dash
 
 
 def test_partial_screener_signal_en_ingles():

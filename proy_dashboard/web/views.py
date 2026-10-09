@@ -332,7 +332,11 @@ def change_rsi(request: Request):
 
 @router.get("/precios", response_class=HTMLResponse)
 def precios(request: Request):
-    """Fila con las 3 tarjetas de precio (QQQ/SPY/ORO) + SMA20/50 + señal."""
+    """Tarjetas de precio (QQQ/SPY/IWM/ORO) + SMA20/50 + señal.
+
+    Cada símbolo lleva su propio código único (B1/B2/B3/B4) desde
+    ``precio.tarjetas[].codigo`` en ``B1_precios.json``.
+    """
     c = _container(request)
     tarjetas = c.precio_service.analisis_todas()
     ib_simbolos = set(c.initial_balance_service.mercado_simbolos())

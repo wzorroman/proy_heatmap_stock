@@ -2,7 +2,7 @@
   {% for c in tarjetas %}
   <article class="card" style="--panel-accent: {{ c.accent }};">
     <h2 class="tinted precio-titulo">
-      {% if chart_code('precios') %}<span class="chart-code">{{ chart_code('precios') }}</span>{% endif %}
+      {% if c.codigo %}<span class="chart-code">{{ c.codigo }}</span>{% endif %}
       {% if c.icono_url %}
       <img class="precio-logo" src="{{ c.icono_url }}" alt="" loading="lazy">
       {% elif c.logo %}

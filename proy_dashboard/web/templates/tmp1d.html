@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="grid">
+  {# B2 — Evolución del score de mercado (movido del dashboard a esta pestaña) #}
+  <div class="cell wide" hx-get="/partials/score_history" hx-trigger="load, every {{ refresh_ms }}ms" hx-swap="innerHTML"></div>
+</section>
+{% endblock %}

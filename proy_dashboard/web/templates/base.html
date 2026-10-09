@@ -14,21 +14,27 @@
   <script src="/static/vendor/htmx/2.0.11/htmx.min.js?v={{ version }}" defer></script>
 </head>
 <body>
-  <header class="topbar">
-    <div>
-      <div class="brand">◈ {{ title|default("Radar Intermarket") }}</div>
-      <div class="sub">
-        Contexto de mercado · PostgreSQL <code>heatmap_stock</code>
-        <span class="tz-badge" title="Zona horaria de visualización (APP_TIMEZONE)">{{ timezone|default("America/New_York") }} · {{ tz_label|default("NY") }}</span>
+  <div class="site-head">
+    <header class="topbar">
+      <div>
+        <div class="brand">◈ {{ title|default("Radar Intermarket") }}</div>
+        <div class="sub">
+          Contexto de mercado · PostgreSQL <code>heatmap_stock</code>
+          <span class="tz-badge" title="Zona horaria de visualización (APP_TIMEZONE)">{{ timezone|default("America/New_York") }} · {{ tz_label|default("NY") }}</span>
+        </div>
       </div>
-    </div>
-    <div class="legend">
-      <span><i class="dot v"></i>positivo</span>
-      <span><i class="dot r"></i>negativo</span>
-      <span><i class="dot a"></i>neutral</span>
-      <span class="badge">v{{ version }}</span>
-    </div>
-  </header>
+      <div class="legend">
+        <span><i class="dot v"></i>positivo</span>
+        <span><i class="dot r"></i>negativo</span>
+        <span><i class="dot a"></i>neutral</span>
+        <span class="badge">v{{ version }}</span>
+      </div>
+    </header>
+    <nav class="tabs" aria-label="Navegación">
+      <a href="/" class="tab{% if active_tab == 'dashboard' %} active{% endif %}">Dashboard</a>
+      <a href="/tmp1d" class="tab{% if active_tab == 'tmp1d' %} active{% endif %}">Tmp 1D</a>
+    </nav>
+  </div>
 
   <main class="container">
     {% block content %}{% endblock %}
